@@ -104,7 +104,7 @@ let questions = [
       options: [
         "6-8 hours of sleep",
         "9 hours or more of sleep",
-        "7 hours of sleep,
+        "7 hours of sleep",
         "Depends on you"
       ]
     },
@@ -120,65 +120,6 @@ let questions = [
       ]
     },
 
-  /*  
-    {
-      numb: 5,
-      question: "According to WHO recommendations, how much time daily do we need to engage in physical activity for our wellbeing?",
-      answer: "30 minutes",
-      options: [
-        "10 minutes",
-        "1 hour",
-        "20 minutes",
-        "SUbjective"
-      ]
-    },
-    {
-      numb: 5,
-      question: "According to WHO recommendations, how much time daily do we need to engage in physical activity for our wellbeing?",
-      answer: "30 minutes",
-      options: [
-        "10 minutes",
-        "1 hour",
-        "20 minutes",
-        "SUbjective"
-      ]
-    },
-    {
-      numb: 5,
-      question: "According to WHO recommendations, how much time daily do we need to engage in physical activity for our wellbeing?",
-      answer: "30 minutes",
-      options: [
-        "10 minutes",
-        "1 hour",
-        "20 minutes",
-        "SUbjective"
-      ]
-    },
-    {
-      numb: 5,
-      question: "According to WHO recommendations, how much time daily do we need to engage in physical activity for our wellbeing?",
-      answer: "30 minutes",
-      options: [
-        "10 minutes",
-        "1 hour",
-        "20 minutes",
-        "SUbjective"
-      ]
-    },
-  // you can uncomment the below codes and make duplicate as more as you want to add question
-  // but remember you need to give the numb value serialize like 1,2,3,5,6,7,8,9.....
 
-  //   {
-  //   numb: 6,
-  //   question: "Your Question is Here",
-  //   answer: "Correct answer of the question is here",
-  //   options: [
-  //     "Option 1",
-  //     "option 2",
-  //     "option 3",
-  //     "option 4"
-  //   ]
-  // },
-];
 
 */
