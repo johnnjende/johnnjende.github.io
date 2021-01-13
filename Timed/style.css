@@ -8,7 +8,7 @@
 }
 
 body{
-    background: #d60936;
+    background: #007bff;
 }
 
 ::selection{
@@ -50,7 +50,7 @@ body{
 }
 
 .info_box{
-    width: 100%;
+    width: 540px;
     background: #fff;
     border-radius: 5px;
     transform: translate(-50%, -50%) scale(0.9);
@@ -96,7 +96,7 @@ body{
 .info_box .buttons button{
     margin: 0 5px;
     height: 40px;
-    width: 100%;
+    width: 100px;
     font-size: 16px;
     font-weight: 500;
     cursor: pointer;
@@ -108,7 +108,7 @@ body{
 }
 
 .quiz_box{
-    width: 100%;
+    width: 550px;
     background: #fff;
     border-radius: 5px;
     transform: translate(-50%, -50%) scale(0.9);
