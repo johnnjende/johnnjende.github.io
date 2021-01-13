@@ -4,3 +4,5 @@ We appreciate all your contributions to this repo as we aim to use technology to
 
 Here are our games so far:
 [Physical Health Quiz](https://alahealthgames.github.io/Timed/)
+
+Visit us at out [GitHub page](https://github.com/alahealthgames)
