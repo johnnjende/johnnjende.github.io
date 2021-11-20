@@ -1,6 +1,6 @@
-# alahealthgames.github.io
-Welcome to an open source github repository of health games for the African Leadership Academy community. 
-We appreciate all your contributions to this repo as we aim to use technology to keep our community physically healthy throughout our time on campus!
+# alahealthgames.github.io by John 
+This repo was made in January of 2021 as part of Y1 orientation week at African Leadership Academy. 
+It's simply a quiz type game that was aimed at keeping the community informed about their physical health and testing how much they know about health on a more general scope.
 
-To play our first game, head on to:
+To test it out, head on to:
 https://johnnjende.github.io/Timed/
