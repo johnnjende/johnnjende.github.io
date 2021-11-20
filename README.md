@@ -3,4 +3,4 @@ Welcome to an open source github repository of health games for the African Lead
 We appreciate all your contributions to this repo as we aim to use technology to keep our community physically healthy throughout our time on campus!
 
 
-[[johnnjende.github.io/Timed]]
+johnnjende.github.io/Timed
