@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#1a1f2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>RampUp · URI Campus Navigation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f5f0eb;--bg2:#ede7df;--card:#ffffff;
+  --blue:#2563eb;--blue-l:#dbeafe;--blue-d:#1d4ed8;
+  --green:#16a34a;--green-l:#dcfce7;
+  --amber:#d97706;--amber-l:#fef3c7;
+  --red:#dc2626;--red-l:#fee2e2;
+  --uri:#002147;--uri-a:#75B2DD;
+  /* Difficulty colors — like trail ratings */
+  --easy:#22c55e;--easy-l:#dcfce7;
+  --mod:#f59e0b;--mod-l:#fef3c7;
+  --hard:#ef4444;--hard-l:#fee2e2;
+  --expert:#7c3aed;--expert-l:#ede9fe;
+  --text:#1c1c1e;--text2:#3c3c43;--text3:#8e8e93;
+  --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.15);
+  --shadow:0 4px 24px rgba(0,0,0,0.10),0 1px 4px rgba(0,0,0,0.06);
+  --shadow-lg:0 12px 48px rgba(0,0,0,0.14),0 2px 8px rgba(0,0,0,0.08);
+  --r:20px;--rl:28px;--rxl:36px;
+  --font:'Nunito',sans-serif;--font2:'Nunito Sans',sans-serif;
+  --safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);font-family:var(--font);color:var(--text)}
+#app{height:100dvh;height:100vh;max-width:430px;margin:0 auto;display:flex;flex-direction:column;position:relative;overflow:hidden;background:var(--bg)}
+
+/* ── VIEWS ── */
+.view{position:absolute;inset:0;display:flex;flex-direction:column;transition:transform .42s cubic-bezier(.32,.72,0,1),opacity .3s;will-change:transform}
+.view.hidden{transform:translateY(100%);opacity:0;pointer-events:none}
+.view.gone-left{transform:translateX(-60px);opacity:0;pointer-events:none}
+
+/* ── WELCOME ── */
+#v-welcome{background:linear-gradient(160deg,#1a2744 0%,#0f1825 100%);align-items:center;justify-content:flex-end;padding:0 0 calc(44px + var(--safe-b))}
+.blob{position:absolute;border-radius:50%;animation:float 6s ease-in-out infinite}
+.blob1{width:300px;height:300px;background:radial-gradient(circle,rgba(59,130,246,.35) 0%,transparent 70%);top:-80px;right:-90px}
+.blob2{width:200px;height:200px;background:radial-gradient(circle,rgba(96,165,250,.25) 0%,transparent 70%);top:140px;left:-70px;animation-delay:2s}
+.blob3{width:180px;height:180px;background:radial-gradient(circle,rgba(52,211,153,.2) 0%,transparent 70%);top:80px;right:50px;animation-delay:4s}
+@keyframes float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-18px) scale(1.04)}}
+.welcome-art{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.welcome-mascot{font-size:100px;line-height:1;filter:drop-shadow(0 8px 24px rgba(0,0,0,.3));animation:mascot-in .8s cubic-bezier(.34,1.56,.64,1) .2s both}
+@keyframes mascot-in{from{transform:scale(.3) translateY(40px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.welcome-content{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;width:100%;padding:0 32px}
+.welcome-badge{background:rgba(117,178,221,.2);border:1px solid rgba(117,178,221,.3);border-radius:20px;padding:5px 14px;font-size:11px;font-weight:800;color:var(--uri-a);letter-spacing:.8px;text-transform:uppercase;margin-bottom:16px;animation:fadein .5s .5s both}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.welcome-title{font-size:44px;font-weight:900;color:#fff;line-height:1.05;text-align:center;margin-bottom:10px;letter-spacing:-.5px;animation:fadein .5s .65s both}
+.welcome-title span{color:var(--uri-a)}
+.welcome-sub{font-size:16px;font-weight:600;color:rgba(255,255,255,.6);text-align:center;line-height:1.55;margin-bottom:34px;font-family:var(--font2);animation:fadein .5s .8s both}
+.btn-primary{width:100%;padding:18px;border-radius:var(--rl);border:none;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-family:var(--font);font-size:17px;font-weight:800;cursor:pointer;box-shadow:0 8px 32px rgba(37,99,235,.4);transition:transform .12s;display:flex;align-items:center;justify-content:center;gap:8px;animation:fadein .5s .95s both}
+.btn-primary:active{transform:scale(.97)}
+.btn-secondary{background:none;border:none;color:rgba(255,255,255,.45);font-family:var(--font2);font-size:14px;font-weight:600;cursor:pointer;margin-top:14px;padding:8px;animation:fadein .5s 1.1s both}
+
+/* ── LOCATION SCREEN ── */
+#v-location{background:var(--bg);padding:calc(24px + var(--safe-t)) 24px 0}
+.top-bar{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.back-btn{width:38px;height:38px;border-radius:50%;background:var(--card);border:none;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;box-shadow:var(--shadow);flex-shrink:0}
+.screen-title{font-size:21px;font-weight:900;color:var(--text)}
+.loc-card{background:var(--card);border-radius:var(--rl);padding:28px 24px;box-shadow:var(--shadow);text-align:center;margin-bottom:16px}
+.loc-icon-wrap{width:72px;height:72px;border-radius:50%;background:var(--blue-l);display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 16px;position:relative}
+.loc-icon-wrap::before,.loc-icon-wrap::after{content:'';position:absolute;inset:-8px;border-radius:50%;background:var(--blue-l);animation:ripple 2s ease-out infinite}
+.loc-icon-wrap::after{animation-delay:.6s}
+@keyframes ripple{0%{transform:scale(.85);opacity:.7}100%{transform:scale(1.4);opacity:0}}
+.loc-title{font-size:19px;font-weight:900;color:var(--text);margin-bottom:7px}
+.loc-sub{font-size:14px;color:var(--text3);line-height:1.55;font-family:var(--font2)}
+.perm-list{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+.perm-row{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg);border-radius:var(--r)}
+.perm-icon{font-size:20px;width:28px;text-align:center;flex-shrink:0}
+.perm-text{font-size:13px;font-weight:800;color:var(--text2)}
+.perm-sub{font-size:11px;color:var(--text3);margin-top:1px;font-family:var(--font2)}
+.perm-check{margin-left:auto;color:var(--green);font-size:18px;opacity:0;transition:opacity .3s}
+.perm-check.show{opacity:1}
+
+/* ── WHERE SCREEN ── */
+#v-where{background:var(--bg)}
+.where-header{background:linear-gradient(160deg,#1a2744,#0f1825);padding:calc(18px + var(--safe-t)) 24px 22px}
+.where-header .screen-title{color:#fff}
+.where-header .top-bar{margin-bottom:14px}
+.where-sub-h{font-size:13px;color:rgba(255,255,255,.55);font-family:var(--font2);font-weight:600;margin-top:2px}
+.loc-display{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:var(--r);padding:11px 14px}
+.loc-pulse-dot{width:10px;height:10px;border-radius:50%;background:#34d399;flex-shrink:0;animation:glow 1.5s infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,.6)}50%{box-shadow:0 0 0 6px rgba(52,211,153,0)}}
+.loc-text{font-size:12px;color:rgba(255,255,255,.85);font-weight:700}
+.where-body{padding:16px 18px 0;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.where-body::-webkit-scrollbar{display:none}
+.search-bar{display:flex;align-items:center;gap:10px;background:var(--card);border:1.5px solid var(--border2);border-radius:var(--r);padding:13px 16px;box-shadow:var(--shadow);margin-bottom:14px}
+.search-icon{font-size:16px;color:var(--text3)}
+#dest-search{flex:1;border:none;outline:none;font-family:var(--font);font-size:15px;font-weight:700;color:var(--text);background:none}
+#dest-search::placeholder{color:var(--text3);font-weight:600}
+.section-label{font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin:0 4px 10px;display:block}
+
+/* ── BUILDING TILE ── */
+.building-grid{display:flex;flex-direction:column;gap:9px;margin-bottom:24px}
+.building-tile{display:flex;align-items:center;gap:13px;background:var(--card);border-radius:var(--rl);padding:14px 15px;cursor:pointer;transition:transform .1s,box-shadow .1s;box-shadow:0 2px 10px rgba(0,0,0,0.06);border:1.5px solid transparent}
+.building-tile:active{transform:scale(.98);box-shadow:var(--shadow)}
+.building-tile.full{border-color:rgba(22,163,74,.2)}
+.building-tile.public{border-color:rgba(217,119,6,.2)}
+.building-tile.limited{border-color:rgba(220,38,38,.15)}
+.tile-icon{width:44px;height:44px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.tile-icon.full{background:var(--green-l)}
+.tile-icon.public{background:var(--amber-l)}
+.tile-icon.limited{background:var(--red-l)}
+.tile-body{flex:1;min-width:0}
+.tile-name{font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px;line-height:1.2}
+.tile-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.tile-tag{font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px}
+.tile-tag.full{background:var(--green-l);color:var(--green)}
+.tile-tag.public{background:var(--amber-l);color:var(--amber)}
+.tile-tag.limited{background:var(--red-l);color:var(--red)}
+.tile-cat{font-size:11px;color:var(--text3);font-weight:600}
+.tile-issue{font-size:10px;font-weight:800;color:#ea580c;background:#fff7ed;border-radius:8px;padding:2px 7px}
+
+/* ── DIFFICULTY BADGE (the new thing!) ── */
+.diff-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;
+  border:1.5px solid;
+}
+.diff-easy{background:var(--easy-l);color:#15803d;border-color:rgba(34,197,94,.3)}
+.diff-mod{background:var(--mod-l);color:#b45309;border-color:rgba(245,158,11,.35)}
+.diff-hard{background:var(--hard-l);color:#b91c1c;border-color:rgba(239,68,68,.3)}
+.diff-expert{background:var(--expert-l);color:#6d28d9;border-color:rgba(124,58,237,.3)}
+
+/* difficulty dots (like ski trail) */
+.diff-dots{display:flex;align-items:center;gap:2px}
+.diff-dot{width:8px;height:8px;border-radius:50%;opacity:.3}
+.diff-dot.lit{opacity:1}
+
+.tile-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
+.tile-dist{font-size:12px;font-weight:700;color:var(--text3)}
+.tile-arrow{width:28px;height:28px;border-radius:50%;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:12px}
+
+/* ── DIFFICULTY EXPLAINER STRIP ── */
+.diff-explainer{
+  background:var(--card);border-radius:var(--rl);padding:14px 16px;
+  margin-bottom:14px;border:1.5px solid var(--border);
+  display:flex;flex-direction:column;gap:10px;
+}
+.diff-explainer-title{font-size:11px;font-weight:900;color:var(--text3);letter-spacing:.7px;text-transform:uppercase;margin-bottom:2px}
+.diff-row{display:flex;align-items:center;gap:10px}
+.diff-row-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:900}
+.diff-row-text{font-size:12px;font-weight:700;color:var(--text2);flex:1}
+.diff-row-sub{font-size:10px;color:var(--text3);font-family:var(--font2)}
+
+/* ── NAV SCREEN ── */
+#v-nav{background:var(--bg);flex-direction:column}
+.nav-top-bar{
+  position:absolute;top:calc(14px + var(--safe-t));left:14px;right:14px;
+  z-index:600;display:flex;align-items:center;justify-content:space-between;
+}
+/* Map / Steps toggle */
+.view-toggle{
+  display:flex;background:rgba(255,255,255,.95);border-radius:20px;padding:3px;
+  box-shadow:var(--shadow-lg);gap:2px;
+}
+.vt-btn{
+  padding:7px 14px;border-radius:17px;border:none;background:none;
+  font-family:var(--font);font-size:12px;font-weight:800;color:var(--text3);
+  cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px;
+}
+.vt-btn.active{background:var(--uri);color:var(--uri-a);box-shadow:0 2px 8px rgba(0,33,71,.25)}
+.vt-btn .vt-icon{font-size:14px}
+
+/* Map panel */
+.map-panel{position:absolute;inset:0;z-index:1}
+.map-panel.hidden{display:none}
+#nav-map{width:100%;height:100%;background:#e8ecf4;min-height:1px}
+
+/* Steps panel */
+.steps-panel{
+  position:absolute;inset:0;z-index:2;
+  background:var(--bg);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:calc(70px + var(--safe-t)) 18px 0;
+}
+.steps-panel::-webkit-scrollbar{display:none}
+.steps-panel.hidden{display:none}
+
+/* Difficulty card at top of steps */
+.nav-diff-card{
+  border-radius:var(--rl);padding:16px 18px;margin-bottom:14px;
+  display:flex;align-items:center;gap:14px;
+}
+.ndc-icon-wrap{
+  width:52px;height:52px;border-radius:var(--rl);
+  display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;
+}
+.ndc-label{font-size:11px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;margin-bottom:3px}
+.ndc-title{font-size:18px;font-weight:900;line-height:1.1;margin-bottom:4px}
+.ndc-detail{font-size:12px;font-family:var(--font2);line-height:1.5;opacity:.75}
+.ndc-dots{display:flex;gap:4px;margin-top:6px}
+.ndc-dot{width:10px;height:10px;border-radius:50%;opacity:.25;transition:opacity .3s}
+.ndc-dot.lit{opacity:1}
+
+/* Floating route card (bottom sheet) */
+.route-card{
+  position:absolute;bottom:0;left:0;right:0;z-index:500;
+  background:var(--card);border-radius:28px 28px 0 0;
+  box-shadow:0 -8px 40px rgba(0,0,0,0.15);
+  padding:0 20px calc(16px + var(--safe-b));
+  max-height:52%;overflow-y:auto;
+}
+.route-card::-webkit-scrollbar{display:none}
+.route-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 16px}
+.route-dest{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.route-dest-icon{width:44px;height:44px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.route-dest-name{font-size:17px;font-weight:900;color:var(--text);line-height:1.2;margin-bottom:3px}
+.route-dest-tag{font-size:12px;font-weight:700}
+
+.step-cards{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.step-card{display:flex;align-items:flex-start;gap:12px;background:var(--bg);border-radius:var(--r);padding:12px 13px;border:1.5px solid transparent;transition:all .3s}
+.step-card.active-step{background:#fff;border-color:var(--blue-l);box-shadow:0 2px 12px rgba(37,99,235,.1)}
+.step-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;margin-top:1px}
+.step-num.done{background:var(--green-l);color:var(--green)}
+.step-num.current{background:var(--blue);color:#fff;animation:step-pulse 1.5s infinite}
+@keyframes step-pulse{0%,100%{box-shadow:0 0 0 0 rgba(37,99,235,.4)}50%{box-shadow:0 0 0 6px rgba(37,99,235,0)}}
+.step-num.upcoming{background:var(--bg2);color:var(--text3)}
+.step-text{font-size:13px;font-weight:700;color:var(--text);line-height:1.4}
+.step-sub{font-size:11px;color:var(--text3);font-family:var(--font2);margin-top:2px;line-height:1.4}
+
+.entrance-detail{background:linear-gradient(135deg,var(--uri),#003a7a);border-radius:var(--rl);padding:14px 16px;margin-bottom:12px;display:none}
+.entrance-detail.show{display:block}
+.ent-label{font-size:9px;font-weight:800;color:rgba(255,255,255,.5);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px}
+.ent-title{font-size:15px;font-weight:900;color:#fff;margin-bottom:7px}
+.ent-features{display:flex;flex-wrap:wrap;gap:5px}
+.ent-feat{background:rgba(255,255,255,.12);border-radius:10px;padding:4px 9px;font-size:11px;font-weight:700;color:rgba(255,255,255,.9)}
+.ent-feat.warn{background:rgba(234,88,12,.25);color:#fed7aa}
+
+.nav-btn-row{display:flex;gap:9px}
+.btn-ghost{flex:1;padding:14px;border-radius:var(--r);background:var(--bg2);border:none;font-family:var(--font);font-size:13px;font-weight:800;color:var(--text2);cursor:pointer}
+.btn-arrive{flex:2;padding:14px;border-radius:var(--r);background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;font-family:var(--font);font-size:14px;font-weight:800;color:#fff;cursor:pointer;box-shadow:0 4px 16px rgba(37,99,235,.35);transition:transform .1s}
+.btn-arrive:active{transform:scale(.98)}
+
+/* Map-mode bottom strip (compact, when map is showing) */
+.map-bottom-strip{
+  position:absolute;bottom:0;left:0;right:0;z-index:550;
+  background:var(--card);border-radius:24px 24px 0 0;
+  padding:0 18px calc(14px + var(--safe-b));
+  box-shadow:0 -6px 24px rgba(0,0,0,.12);
+}
+.mbs-handle{width:32px;height:4px;background:var(--border);border-radius:2px;margin:10px auto 12px}
+.mbs-row{display:flex;align-items:center;gap:12px}
+.mbs-dest{flex:1}
+.mbs-name{font-size:15px;font-weight:900;color:var(--text);margin-bottom:2px}
+.mbs-meta{font-size:12px;color:var(--text3);font-family:var(--font2)}
+.mbs-diff{flex-shrink:0}
+.mbs-btn{padding:11px 18px;border-radius:var(--r);background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;font-family:var(--font);font-size:13px;font-weight:800;color:#fff;cursor:pointer;white-space:nowrap}
+
+/* ── ARRIVED SCREEN ── */
+#v-arrived{background:linear-gradient(160deg,#052e16 0%,#14532d 100%);align-items:center;justify-content:center;padding:calc(24px + var(--safe-t)) 24px calc(32px + var(--safe-b))}
+.confetti-wrap{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.confetti-piece{position:absolute;width:8px;height:8px;border-radius:2px;animation:fall linear infinite}
+@keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
+.arrived-big{font-size:88px;margin-bottom:10px;animation:pop .5s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.arrived-h{font-size:32px;font-weight:900;color:#fff;text-align:center;margin-bottom:6px;animation:fadein .4s .3s both;line-height:1.1}
+.arrived-bldg{font-size:16px;font-weight:700;color:rgba(255,255,255,.7);text-align:center;margin-bottom:24px;font-family:var(--font2);animation:fadein .4s .45s both}
+.entrance-big-card{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.15);border-radius:var(--rl);padding:18px;width:100%;margin-bottom:14px;animation:fadein .4s .6s both}
+.ebc-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px}
+.ebc-icon{font-size:26px}
+.ebc-title{font-size:15px;font-weight:900;color:#fff;margin-bottom:3px}
+.ebc-desc{font-size:12px;color:rgba(255,255,255,.7);line-height:1.5;font-family:var(--font2)}
+.feat-wrap{display:flex;flex-wrap:wrap;gap:6px}
+.feat-pill{background:rgba(255,255,255,.12);border-radius:12px;padding:4px 10px;font-size:11px;font-weight:700;color:rgba(255,255,255,.9)}
+.feat-pill.warn{background:rgba(234,88,12,.25);color:#fed7aa}
+.issue-warn{background:rgba(234,88,10,.2);border:1px solid rgba(234,88,10,.3);border-radius:var(--r);padding:12px 14px;width:100%;margin-bottom:14px;display:none;gap:10px;align-items:flex-start;animation:fadein .4s .7s both}
+.issue-warn.show{display:flex}
+.iwt{font-size:13px;font-weight:800;color:#fed7aa;margin-bottom:2px}
+.iws{font-size:12px;color:rgba(255,255,255,.6);font-family:var(--font2)}
+.arrived-actions{width:100%;display:flex;flex-direction:column;gap:9px;animation:fadein .4s .8s both}
+.btn-w{padding:15px;border-radius:var(--r);border:none;background:rgba(255,255,255,.14);color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;text-align:center}
+.btn-ws{padding:15px;border-radius:var(--r);border:none;background:#fff;color:var(--green);font-family:var(--font);font-size:15px;font-weight:900;cursor:pointer}
+
+/* ── REPORT SHEET ── */
+.sheet-overlay{position:absolute;inset:0;z-index:900;background:rgba(0,0,0,.45);display:none;align-items:flex-end}
+.sheet-overlay.open{display:flex}
+.bottom-sheet{background:var(--card);border-radius:28px 28px 0 0;width:100%;padding:0 20px calc(20px + var(--safe-b));animation:slideup .3s cubic-bezier(.32,.72,0,1)}
+@keyframes slideup{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 16px}
+.sheet-title{font-size:19px;font-weight:900;color:var(--text);margin-bottom:5px}
+.sheet-sub{font-size:13px;color:var(--text3);font-family:var(--font2);margin-bottom:16px}
+.type-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
+.type-btn{padding:13px 10px;border-radius:var(--r);border:2px solid var(--border);background:var(--bg);cursor:pointer;text-align:center;transition:all .12s}
+.type-btn.sel{border-color:var(--blue);background:var(--blue-l)}
+.type-btn-icon{font-size:22px;margin-bottom:4px}
+.type-btn-label{font-size:12px;font-weight:800;color:var(--text2)}
+.sheet-ta{width:100%;padding:13px;font-family:var(--font2);font-size:13px;color:var(--text);background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r);resize:none;min-height:75px;outline:none;margin-bottom:13px}
+.sheet-ta:focus{border-color:var(--blue)}
+.btn-submit{width:100%;padding:15px;border-radius:var(--r);border:none;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer}
+
+/* ── LEAFLET OVERRIDES ── */
+.you-dot{width:18px;height:18px;border-radius:50%;background:#3b82f6;border:3px solid #fff;box-shadow:0 0 0 5px rgba(59,130,246,.25);animation:you-pulse 2s infinite}
+@keyframes you-pulse{0%,100%{box-shadow:0 0 0 4px rgba(59,130,246,.2)}50%{box-shadow:0 0 0 10px rgba(59,130,246,0)}}
+.leaflet-control-zoom{border:none!important;box-shadow:var(--shadow)!important}
+.leaflet-control-zoom a{font-size:16px!important;line-height:28px!important;width:30px!important;height:30px!important;font-family:var(--font)!important}
+.leaflet-control-zoom a:first-child{border-radius:10px 10px 0 0!important}
+.leaflet-control-zoom a:last-child{border-radius:0 0 10px 10px!important}
+.leaflet-control-attribution{font-size:9px!important;background:rgba(255,255,255,.7)!important;border-radius:6px 0 0 0!important}
+::-webkit-scrollbar{display:none}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ── WELCOME ──────────────────────────────── -->
+<div id="v-welcome" class="view">
+  <div class="welcome-art">
+    <div class="blob blob1"></div><div class="blob blob2"></div><div class="blob blob3"></div>
+    <svg style="position:absolute;bottom:220px;left:0;width:100%;height:180px;opacity:.1" viewBox="0 0 430 180" fill="none">
+      <path d="M-10 140 Q90 60 210 110 Q330 160 440 40" stroke="#75B2DD" stroke-width="2.5" stroke-dasharray="7 5"/>
+      <path d="M-10 90 Q110 130 230 70 Q350 10 440 90" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="5 7"/>
+    </svg>
+  </div>
+  <div class="welcome-content" style="margin-bottom:0">
+    <div class="welcome-mascot" style="margin-top:auto;padding-top:calc(40px + var(--safe-t))">♿</div>
+    <div style="height:28px"></div>
+    <div class="welcome-badge">URI Kingston Campus</div>
+    <div class="welcome-title">Your campus,<br><span>your way.</span></div>
+    <div class="welcome-sub">Navigate to accessible entrances.<br>Know the terrain before you go.</div>
+    <button class="btn-primary" onclick="startOnboard()"><span>Get started</span><span style="font-size:20px">→</span></button>
+    <button class="btn-secondary" onclick="skipToMain()">I've done this before</button>
+    <div style="height:8px"></div>
+  </div>
+</div>
+
+<!-- ── LOCATION SETUP ────────────────────────── -->
+<div id="v-location" class="view hidden">
+  <div class="top-bar">
+    <button class="back-btn" onclick="goTo('v-welcome')">←</button>
+    <div class="screen-title">Quick setup</div>
+  </div>
+  <div class="loc-card">
+    <div class="loc-icon-wrap">📍</div>
+    <div class="loc-title">Allow location access</div>
+    <div class="loc-sub">So we can find the closest accessible entrance and show you how hard the route is.</div>
+    <div class="perm-list">
+      <div class="perm-row"><span class="perm-icon">📍</span><div><div class="perm-text">Your location</div><div class="perm-sub">Real-time directions + terrain info</div></div><span class="perm-check" id="pc-loc">✓</span></div>
+      <div class="perm-row"><span class="perm-icon">🔔</span><div><div class="perm-text">Issue alerts</div><div class="perm-sub">Know about broken doors before you arrive</div></div><span class="perm-check" id="pc-notif">✓</span></div>
+    </div>
+  </div>
+  <button class="btn-primary" style="margin:0 24px;width:calc(100% - 48px)" onclick="requestLocation()">Allow location</button>
+  <button class="btn-secondary" style="color:var(--text3);margin:10px auto;display:block;font-family:var(--font2)" onclick="skipToMain()">Skip for now</button>
+</div>
+
+<!-- ── WHERE TO ──────────────────────────────── -->
+<div id="v-where" class="view hidden">
+  <div class="where-header">
+    <div class="top-bar">
+      <button class="back-btn" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.15)" onclick="goTo('v-welcome')">←</button>
+      <div><div class="screen-title">Where to?</div><div class="where-sub-h">73 buildings · URI Kingston</div></div>
+    </div>
+    <div class="loc-display">
+      <div class="loc-pulse-dot"></div>
+      <div class="loc-text" id="loc-text">URI Kingston Campus</div>
+    </div>
+  </div>
+  <div class="where-body" id="where-body">
+    <div style="height:14px"></div>
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input id="dest-search" type="search" placeholder="Search any building…" autocomplete="off" autocorrect="off">
+    </div>
+    <!-- difficulty legend strip -->
+    <div class="diff-explainer" id="diff-explainer">
+      <div class="diff-explainer-title">Route difficulty</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div class="diff-row"><div class="diff-row-icon" style="background:var(--easy-l)">🟢</div><div><div class="diff-row-text" style="color:#15803d">Easy</div><div class="diff-row-sub">Flat, smooth paths</div></div></div>
+        <div class="diff-row"><div class="diff-row-icon" style="background:var(--mod-l)">🟡</div><div><div class="diff-row-text" style="color:#b45309">Moderate</div><div class="diff-row-sub">Gentle inclines</div></div></div>
+        <div class="diff-row"><div class="diff-row-icon" style="background:var(--hard-l)">🔴</div><div><div class="diff-row-text" style="color:#b91c1c">Hard</div><div class="diff-row-sub">Steep slope, plan ahead</div></div></div>
+        <div class="diff-row"><div class="diff-row-icon" style="background:var(--expert-l)">🟣</div><div><div class="diff-row-text" style="color:#6d28d9">Expert only</div><div class="diff-row-sub">Very steep, limited access</div></div></div>
+      </div>
+    </div>
+    <span class="section-label" id="suggestions-label">Nearby &amp; common</span>
+    <div class="building-grid" id="building-grid"></div>
+  </div>
+</div>
+
+<!-- ── NAVIGATION ────────────────────────────── -->
+<div id="v-nav" class="view hidden">
+  <!-- map behind everything -->
+  <div class="map-panel" id="map-panel">
+    <div id="nav-map" style="width:100%;height:100%"></div>
+  </div>
+
+  <!-- steps panel (on top, toggleable) -->
+  <div class="steps-panel" id="steps-panel">
+    <div class="nav-diff-card" id="nav-diff-card"></div>
+    <div class="step-cards" id="step-cards"></div>
+    <div class="entrance-detail" id="entrance-detail"></div>
+    <div style="height:220px"></div><!-- spacer for bottom sheet -->
+  </div>
+
+  <!-- top bar: back + map/steps toggle -->
+  <div class="nav-top-bar">
+    <button class="back-btn" style="box-shadow:var(--shadow-lg)" onclick="goTo('v-where')">←</button>
+    <div class="view-toggle" id="view-toggle">
+      <button class="vt-btn active" id="vt-steps" onclick="setNavView('steps')"><span class="vt-icon">📋</span> Steps</button>
+      <button class="vt-btn" id="vt-map" onclick="setNavView('map')"><span class="vt-icon">🗺</span> Map</button>
+    </div>
+  </div>
+
+  <!-- bottom sheet (steps mode) -->
+  <div class="route-card" id="route-card">
+    <div class="route-handle"></div>
+    <div class="route-dest" id="route-dest"></div>
+    <div class="nav-btn-row">
+      <button class="btn-ghost" onclick="openReportSheet()">⚑ Issue</button>
+      <button class="btn-arrive" onclick="simulateArrive()">I'm here ✓</button>
+    </div>
+  </div>
+
+  <!-- compact bottom strip (map mode) -->
+  <div class="map-bottom-strip hidden" id="map-bottom-strip">
+    <div class="mbs-handle"></div>
+    <div class="mbs-row">
+      <div class="mbs-dest">
+        <div class="mbs-name" id="mbs-name"></div>
+        <div class="mbs-meta" id="mbs-meta"></div>
+      </div>
+      <div class="mbs-diff" id="mbs-diff"></div>
+      <button class="mbs-btn" onclick="simulateArrive()">I'm here ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ARRIVED ───────────────────────────────── -->
+<div id="v-arrived" class="view hidden">
+  <div class="confetti-wrap" id="confetti"></div>
+  <div style="position:absolute;top:calc(16px + var(--safe-t));left:18px;z-index:2">
+    <button class="back-btn" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.2)" onclick="goTo('v-where')">←</button>
+  </div>
+  <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;width:100%">
+    <div class="arrived-big">🎉</div>
+    <div class="arrived-h">You made it!</div>
+    <div class="arrived-bldg" id="arrived-bldg"></div>
+    <div class="entrance-big-card" id="entrance-big-card"></div>
+    <div class="issue-warn" id="issue-warn"><div style="font-size:18px">⚠</div><div><div class="iwt" id="iwt"></div><div class="iws" id="iws"></div></div></div>
+    <div class="arrived-actions">
+      <button class="btn-w" onclick="openReportSheet()">⚑ Report a problem at this entrance</button>
+      <button class="btn-ws" onclick="goTo('v-where')">Navigate to another building</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── REPORT SHEET ──────────────────────────── -->
+<div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet(event)">
+  <div class="bottom-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Report an issue</div>
+    <div class="sheet-sub">Help other wheelchair users by flagging barriers.</div>
+    <div class="type-grid">
+      <div class="type-btn sel" data-type="door" onclick="selType(this)"><div class="type-btn-icon">🚪</div><div class="type-btn-label">Door/opener</div></div>
+      <div class="type-btn" data-type="elevator" onclick="selType(this)"><div class="type-btn-icon">🛗</div><div class="type-btn-label">Elevator</div></div>
+      <div class="type-btn" data-type="path" onclick="selType(this)"><div class="type-btn-icon">🚧</div><div class="type-btn-label">Blocked path</div></div>
+      <div class="type-btn" data-type="other" onclick="selType(this)"><div class="type-btn-icon">⚠</div><div class="type-btn-label">Other</div></div>
+    </div>
+    <textarea class="sheet-ta" id="issue-desc" placeholder="Describe what you found… (optional)"></textarea>
+    <button class="btn-submit" onclick="submitIssue()">Submit report</button>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<script>
+// ─── DATA ─────────────────────────────────────────────────────────────────
+const F='full',P='public',L='limited';
+const ACCESS_COLOR={full:'#16a34a',public:'#d97706',limited:'#dc2626'};
+const ACCESS_LABEL={full:'Fully accessible',public:'Public access',limited:'Limited'};
+const CAT_EMOJI={Academic:'🏛',Residential:'🏠',Dining:'🍽',Recreation:'🏃',Greek:'🏠'};
+
+// Difficulty is computed dynamically based on elevation delta from user position
+// See calcDirectionalDiff() — it factors in uphill vs downhill direction
+
+// Route difficulty from campus center (approximate, based on URI map topography)
+// URI campus has a notable north-south slope: residential quad is higher, south campus lower
+// Plains Rd area (B-row) is significantly elevated vs D/E row
+const BUILDINGS=[
+  {id:'memorial_union',name:'Memorial Union',short:'Memorial Union',cat:'Academic',access:'full',lat:41.4797,lng:-71.5250,elev:43,grid:'D4',icon:'🏛',terrain:'Central campus. Flat paved paths.',entrance:{side:'North entrance (main)',features:['Automatic door opener','Elevator to all floors','Accessible restrooms all levels','Wide corridors'],warning:'Door opener intermittent — may need to strike mechanism'},steps:['Head toward the large brick building on Lower College Rd','Look for the blue wheelchair sign on the north side','Automatic door opener on left — tap to activate','Elevator is straight ahead past the lobby']},
+  {id:'carothers',name:'Carothers Library',short:'Library',cat:'Academic',access:'full',lat:41.4835,lng:-71.5250,elev:49,grid:'B4',icon:'📚',terrain:'Upper campus. Uphill from central quad.',entrance:{side:'West entrance (accessible)',features:['Step-free ramp','Elevator to all 4 floors','Accessible study rooms','Accessible restrooms'],warning:null},steps:['Take the path north along Campus Ave — uphill','Library is the large building on your left','Use the west entrance — flat ramp, no steps','Elevator immediately on the right inside']},
+  {id:'ballentine',name:'Ballentine Hall',short:'Ballentine',cat:'Academic',access:'full',lat:41.4816,lng:-71.5220,elev:43,grid:'C5',icon:'💼',terrain:'Central campus. Flat paths.',entrance:{side:'East accessible entrance',features:['Step-free ramp','Elevator to all floors','Accessible classrooms'],warning:null},steps:['Head east on Lower College Rd','Ballentine is the brick building on the right','Use the east side entrance — painted ramp','Elevator inside to the left']},
+  {id:'beaupre',name:'Beaupré Center',short:'Beaupré',cat:'Academic',access:'full',lat:41.4835,lng:-71.5252,elev:49,grid:'B4',icon:'🔬',terrain:'Upper campus. Uphill from central quad.',entrance:{side:'Main entrance',features:['Step-free','Elevator available'],warning:null},steps:['Head north toward the science buildings — uphill','Beaupré is on the right','Main entrance — step-free']},
+  {id:'bliss',name:'Bliss Hall',short:'Bliss Hall',cat:'Academic',access:'full',lat:41.4815,lng:-71.5218,elev:43,grid:'C5',icon:'🔩',terrain:'Central campus. Flat paved paths.',entrance:{side:'Main entrance',features:['Step-free','Elevator available','Accessible labs'],warning:null},steps:['Head east toward the engineering cluster','Bliss is adjacent to Ballentine','Main entrance — step-free']},
+  {id:'carlotti',name:'Carlotti Admin Building',short:'Carlotti Admin',cat:'Academic',access:'full',lat:41.4816,lng:-71.5252,elev:44,grid:'C4',icon:'🏢',terrain:'Central campus. Flat paved paths.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['Central campus near the quad','Carlotti is on your right','Main entrance is step-free']},
+  {id:'chafee',name:'Chafee Social Science Center',short:'Chafee',cat:'Academic',access:'full',lat:41.4834,lng:-71.5248,elev:49,grid:'B4',icon:'🎓',terrain:'Upper campus. Uphill from central quad.',entrance:{side:'Main entrance',features:['Step-free','Elevator','Accessible classrooms'],warning:null},steps:['Head north on Campus Ave — uphill','Chafee is on the left','Main entrance — step-free, elevator inside']},
+  {id:'fascitelli_eng',name:'Fascitelli Engineering Center',short:'Engineering',cat:'Academic',access:'full',lat:41.4834,lng:-71.5220,elev:47,grid:'B5',icon:'🔬',terrain:'Upper campus. Uphill from central quad.',entrance:{side:'Main entrance (ground floor)',features:['Full ADA compliance','Automatic sliding doors','Elevator all floors'],warning:null},steps:['Head east along Upper College Rd — uphill','Engineering center is the modern glass building','Ground floor main entrance — automatic sliding doors','All floors accessible by elevator']},
+  {id:'fine_arts',name:'Fine Arts Center',short:'Fine Arts',cat:'Academic',access:'full',lat:41.4834,lng:-71.5190,elev:45,grid:'B6',icon:'🎨',terrain:'Upper campus. Uphill and east.',entrance:{side:'Main entrance',features:['Step-free','Elevator','Accessible studios'],warning:null},steps:['Head east toward the arts buildings','Fine Arts Center is on the right','Main entrance — step-free']},
+  {id:'fogarty',name:'Fogarty Hall',short:'Fogarty Hall',cat:'Academic',access:'full',lat:41.4798,lng:-71.5252,elev:43,grid:'D4',icon:'🏛',terrain:'Central campus. Flat paved paths.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['On Lower College Rd','Fogarty is near Memorial Union','Main entrance — step-free']},
+  {id:'hope_commons',name:'Hope Commons',short:'Hope Dining',cat:'Dining',access:'full',lat:41.4816,lng:-71.5278,elev:46,grid:'C3',icon:'🍽',terrain:'Central campus. Flat paths.',entrance:{side:'Main south entrance',features:['Step-free entry','Wide double doors','Accessible seating throughout'],warning:null},steps:['Walk south on Campus Ave — mostly flat','Hope Commons is the large glass-fronted building','Main entrance has no steps — wide double doors','All dining areas on one accessible level']},
+  {id:'keaney',name:'Keaney Gymnasium',short:'Keaney Gym',cat:'Recreation',access:'full',lat:41.4816,lng:-71.5310,elev:50,grid:'C2',icon:'🏀',terrain:'West campus. Some slope from central.',entrance:{side:'Main entrance',features:['Step-free','Elevator','Accessible courts'],warning:null},steps:['Head west toward the athletics complex','Keaney Gymnasium is on the left','Main entrance — step-free']},
+  {id:'lippitt',name:'Lippitt Hall',short:'Lippitt Hall',cat:'Academic',access:'full',lat:41.4815,lng:-71.5222,elev:43,grid:'C5',icon:'🏛',terrain:'Central campus. Flat paved paths.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['East campus on Upper College Rd','Lippitt is in the academic cluster','Main entrance — step-free']},
+  {id:'mackal',name:'Mackal Field House',short:'Mackal',cat:'Recreation',access:'full',lat:41.4798,lng:-71.5312,elev:46,grid:'D2',icon:'🏟',terrain:'West campus. Slight downhill heading west.',entrance:{side:'East entrance',features:['Flat entry','Elevator'],warning:null},steps:['Head west toward the athletics buildings','Mackal is past the stadium','East entrance at ground level']},
+  {id:'morrill',name:'Morrill Hall',short:'Morrill Hall',cat:'Academic',access:'full',lat:41.4798,lng:-71.5254,elev:43,grid:'D4',icon:'🏛',terrain:'Central campus. Flat paved paths.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['Near Memorial Union on Lower College Rd','Morrill is adjacent to the Union','Main entrance — step-free']},
+  {id:'multicultural',name:'Multicultural Student Services',short:'Multicultural',cat:'Academic',access:'full',lat:41.4817,lng:-71.5252,elev:44,grid:'C4',icon:'🌍',terrain:'Central campus. Flat paved paths.',entrance:{side:'Main entrance',features:['Step-free','Accessible meeting rooms'],warning:null},steps:['Central campus near the quad','MSSC is in the main academic block','Main entrance — step-free']},
+  {id:'muslim_center',name:'Muslim Community Center',short:'Muslim Center',cat:'Academic',access:'full',lat:41.4798,lng:-71.5190,elev:41,grid:'D6',icon:'🕌',terrain:'East campus. Flat paved paths.',entrance:{side:'Main entrance',features:['Step-free','Accessible'],warning:null},steps:['Head east toward the religious centers','Muslim Center is on the right','Main entrance — step-free']},
+  {id:'pastore',name:'Pastore Hall',short:'Pastore Hall',cat:'Academic',access:'full',lat:41.4800,lng:-71.5256,elev:43,grid:'D4',icon:'🏛',terrain:'Central campus. Flat paved paths.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['Near Memorial Union','Pastore is on Lower College Rd','Main entrance — step-free']},
+  {id:'potter',name:'Potter Building (Health)',short:'Health Services',cat:'Academic',access:'full',lat:41.4815,lng:-71.5276,elev:46,grid:'C3',icon:'🏥',terrain:'Central campus. Flat paved paths.',entrance:{side:'Front entrance',features:['Step-free entry','Automatic door','Accessible waiting areas'],warning:null},steps:['Head toward the student health building — flat route','Potter is between the gym and residential halls','Front entrance has no steps','Automatic door: press blue button on right']},
+  {id:'quinn',name:'Quinn Hall',short:'Quinn Hall',cat:'Academic',access:'full',lat:41.4800,lng:-71.5258,elev:43,grid:'D4',icon:'🏛',terrain:'Central campus. Flat paved paths.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['On Lower College Rd near Memorial Union','Quinn is on the south side','Main entrance — step-free']},
+  {id:'ranger',name:'Ranger Hall',short:'Ranger Hall',cat:'Academic',access:'full',lat:41.4798,lng:-71.5222,elev:42,grid:'D5',icon:'🏛',terrain:'Central campus. Flat paved paths.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['East of Memorial Union on Ranger Rd','Ranger Hall is on your right','Main entrance — step-free']},
+  {id:'rodman',name:'Rodman Hall',short:'Rodman Hall',cat:'Academic',access:'full',lat:41.4834,lng:-71.5248,elev:49,grid:'B4',icon:'🏛',terrain:'Upper campus. Uphill from central quad.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['North campus on Library Rd — uphill','Rodman is near the library','Main entrance — step-free']},
+  {id:'roosevelt',name:'Roosevelt Hall',short:'Roosevelt Hall',cat:'Academic',access:'full',lat:41.4817,lng:-71.5254,elev:44,grid:'C4',icon:'🏛',terrain:'Central campus. Flat paved paths.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['Central campus on the quad','Roosevelt is on the north side','Main entrance — step-free']},
+  {id:'ryan',name:'Ryan Center',short:'Ryan Center',cat:'Recreation',access:'full',lat:41.4835,lng:-71.5312,elev:54,grid:'B2',icon:'🏟',terrain:'Northwest campus. Uphill from most of campus.',entrance:{side:'East entrance (arena level)',features:['Flat entry from paved lot','Elevator inside','Accessible seating','Accessible restrooms'],warning:null},steps:['Head northwest — uphill for ~200m','Large arena building is clearly visible','East side entrance at arena level — completely flat','Press button for automatic door on right side']},
+  {id:'swan',name:'Swan Hall',short:'Swan Hall',cat:'Residential',access:'full',lat:41.4799,lng:-71.5224,elev:42,grid:'D5',icon:'🏠',terrain:'Central campus. Flat paved paths.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['East of Memorial Union','Swan Hall is in the residential cluster','Main entrance — step-free']},
+  {id:'tootell',name:'Tootell PE Center',short:'Tootell PE',cat:'Recreation',access:'full',lat:41.4817,lng:-71.5312,elev:50,grid:'C2',icon:'🏋',terrain:'West campus. Some slope from central.',entrance:{side:'Main entrance',features:['Ramp at entrance','Elevator','Accessible gym facilities'],warning:null},steps:['Head west toward athletics — flat route','Tootell is next to Keaney Gym','Ramp at main entrance — smooth gradual slope','Elevator inside for upper level']},
+  {id:'tyler',name:'Tyler Hall',short:'Tyler Hall',cat:'Academic',access:'full',lat:41.4834,lng:-71.5222,elev:47,grid:'B5',icon:'🏛',terrain:'Upper campus. Uphill from central quad.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['Upper campus on East Alumni Ave','Tyler Hall is in the science cluster','Main entrance — step-free']},
+  {id:'white',name:'White Hall (Nursing)',short:'White Hall',cat:'Academic',access:'full',lat:41.4854,lng:-71.5252,elev:48,grid:'A4',icon:'💉',terrain:'Far north campus. Uphill from central.',entrance:{side:'Main entrance',features:['Step-free','Elevator','Accessible labs'],warning:null},steps:['Far north campus — uphill from central','White Hall is in the health sciences area','Main entrance — step-free']},
+  {id:'woodward',name:'Woodward Hall',short:'Woodward Hall',cat:'Academic',access:'full',lat:41.4833,lng:-71.5224,elev:47,grid:'B5',icon:'🏛',terrain:'Upper campus. Uphill from central quad.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['Upper campus on East Alumni Ave','Woodward is near Tyler Hall','Main entrance — step-free']},
+  {id:'avedisian',name:'Avedisian Hall (Pharmacy)',short:'Pharmacy',cat:'Academic',access:'full',lat:41.4833,lng:-71.5222,elev:47,grid:'B5',icon:'💊',terrain:'Upper campus. Uphill from central quad.',entrance:{side:'Main entrance',features:['Step-free','Elevator available','Accessible labs'],warning:null},steps:['Head northeast toward the science buildings — uphill','Avedisian is the pharmacy building near engineering','Main entrance — step-free, automatic door','Elevator inside to the left of the lobby']},
+  {id:'alumni_center',name:'Alumni Center',short:'Alumni Center',cat:'Academic',access:'full',lat:41.4799,lng:-71.5224,elev:42,grid:'D5',icon:'🏛',terrain:'Central campus. Flat paved paths.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['East campus near Ranger Rd','Alumni Center is on the right','Main entrance — step-free']},
+  {id:'biotech',name:'DeChristofaro Biotech Center',short:'Biotech Center',cat:'Academic',access:'full',lat:41.4853,lng:-71.5252,elev:48,grid:'A4',icon:'🧬',terrain:'Far north campus. Uphill from central.',entrance:{side:'Main entrance',features:['Step-free','Elevator','Accessible labs'],warning:null},steps:['Far north campus near White Hall — uphill','Biotech Center is on the left','Main entrance — step-free']},
+  {id:'coastal_institute',name:'Coastal Institute',short:'Coastal Institute',cat:'Academic',access:'full',lat:41.4853,lng:-71.5222,elev:46,grid:'A5',icon:'🌊',terrain:'Far north campus. Uphill from central.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['Far northeast campus on Flagg Rd','Coastal Institute is on the right','Main entrance — step-free']},
+  {id:'boss_ice',name:'Boss Ice Arena',short:'Ice Arena',cat:'Recreation',access:'full',lat:41.4798,lng:-71.5340,elev:48,grid:'D1',icon:'🏒',terrain:'Far west campus. Slight downhill heading west.',entrance:{side:'Main entrance',features:['Step-free','Accessible seating'],warning:null},steps:['Head far west on campus','Ice Arena is past Keaney Lot','Main entrance at ground level']},
+  {id:'gender_sexuality',name:'Gender and Sexuality Center',short:'Gender Center',cat:'Academic',access:'full',lat:41.4778,lng:-71.5222,elev:39,grid:'E5',icon:'🏛',terrain:'South campus. Downhill from central quad.',entrance:{side:'Main entrance',features:['Step-free','Accessible'],warning:null},steps:['South campus near Fortin Rd','Gender Center is in the south complex','Main entrance — step-free']},
+  {id:'green_hall',name:'Green Hall',short:'Green Hall',cat:'Academic',access:'full',lat:41.4800,lng:-71.5224,elev:42,grid:'D5',icon:'🏛',terrain:'Central campus. Flat paved paths.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['East of Memorial Union','Green Hall is in the residential cluster','Main entrance — step-free']},
+  {id:'higgins_welcome',name:'Higgins Welcome Center',short:'Welcome Center',cat:'Academic',access:'full',lat:41.4800,lng:-71.5226,elev:42,grid:'D5',icon:'👋',terrain:'Central campus. Flat paved paths.',entrance:{side:'Main entrance',features:['Step-free','Automatic doors','Accessible lobby'],warning:null},steps:['East campus on Campus Ave','Welcome Center is clearly marked','Main entrance — step-free, automatic doors']},
+  {id:'hillel',name:'Norman M. Fain Hillel Center',short:'Hillel Center',cat:'Academic',access:'full',lat:41.4779,lng:-71.5280,elev:41,grid:'E3',icon:'🕍',terrain:'South campus. Downhill from central.',entrance:{side:'Main entrance',features:['Step-free','Accessible meeting rooms'],warning:null},steps:['South campus on Fraternity Circle area','Hillel is on the right','Main entrance — step-free']},
+  {id:'kirk_ael',name:'Kirk Applied Engineering Lab',short:'Kirk Lab',cat:'Academic',access:'full',lat:41.4833,lng:-71.5224,elev:47,grid:'B5',icon:'🔧',terrain:'Upper campus. Uphill from central quad.',entrance:{side:'Main entrance',features:['Step-free','Accessible labs'],warning:null},steps:['Upper campus near engineering cluster','Kirk Lab is on the right','Main entrance — step-free']},
+  {id:'mallon',name:'Mallon Outreach Center',short:'Mallon Center',cat:'Academic',access:'full',lat:41.4833,lng:-71.5226,elev:47,grid:'B5',icon:'🏛',terrain:'Upper campus. Uphill from central quad.',entrance:{side:'Main entrance',features:['Step-free'],warning:null},steps:['Upper campus near engineering','Mallon is on the left','Main entrance — step-free']},
+  {id:'uri_foundation',name:'URI Foundation',short:'URI Foundation',cat:'Academic',access:'full',lat:41.4799,lng:-71.5222,elev:42,grid:'D5',icon:'🏛',terrain:'Central campus. Flat paved paths.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['East campus near Ranger Rd','URI Foundation building on the right','Main entrance — step-free']},
+  {id:'social_science_rc',name:'Social Science Research Center',short:'Social Science RC',cat:'Academic',access:'full',lat:41.4852,lng:-71.5252,elev:48,grid:'A4',icon:'🔭',terrain:'Far north campus. Uphill from central.',entrance:{side:'Main entrance',features:['Step-free','Accessible'],warning:null},steps:['Far north campus near White Hall','Social Science RC on the left','Main entrance — step-free']},
+  {id:'episcopal',name:'Episcopal Center',short:'Episcopal Center',cat:'Academic',access:'full',lat:41.4779,lng:-71.5252,elev:40,grid:'E4',icon:'⛪',terrain:'South campus. Downhill from central.',entrance:{side:'Main entrance',features:['Step-free'],warning:null},steps:['South campus on Fortin Rd','Episcopal Center is on the right','Main entrance — step-free']},
+  {id:'catholic_center',name:'Catholic Center',short:'Catholic Center',cat:'Academic',access:'full',lat:41.4817,lng:-71.5190,elev:42,grid:'C6',icon:'⛪',terrain:'East campus. Flat approach from campus.',entrance:{side:'Main entrance',features:['Step-free'],warning:null},steps:['East campus on Bills Rd','Catholic Center is on the right','Main entrance — step-free']},
+  {id:'barlow',name:'Barlow Hall',short:'Barlow Hall',cat:'Residential',access:'full',lat:41.4799,lng:-71.5278,elev:44,grid:'D3',icon:'🏠',terrain:'Central residential quad. Flat.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['Residential quad area','Barlow is in the main dorm cluster','Main entrance — step-free']},
+  {id:'browning',name:'Browning Hall',short:'Browning Hall',cat:'Residential',access:'full',lat:41.4800,lng:-71.5280,elev:44,grid:'D3',icon:'🏠',terrain:'Central residential quad. Flat.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['Residential quad','Browning is near Barlow','Main entrance — step-free']},
+  {id:'butterfield',name:'Butterfield Hall (Dining)',short:'Butterfield Dining',cat:'Dining',access:'full',lat:41.4800,lng:-71.5282,elev:44,grid:'D3',icon:'🍔',terrain:'Central residential quad. Flat.',entrance:{side:'Main entrance',features:['Step-free','Center divider on double doors'],warning:'Center divider cuts door width in half — position to one side carefully'},steps:['Head south into the residential quad','Butterfield is the large dining hall building','Main entrance: double doors with a center divider','Position to one side before pushing — divider makes it narrow']},
+  {id:'eddy',name:'Eddy Hall',short:'Eddy Hall',cat:'Residential',access:'full',lat:41.4799,lng:-71.5276,elev:44,grid:'D3',icon:'🏠',terrain:'Central residential quad. Flat.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['Residential quad','Eddy Hall is near Browning','Main entrance — step-free']},
+  {id:'garrahy',name:'Garrahy Hall',short:'Garrahy Hall',cat:'Residential',access:'full',lat:41.4853,lng:-71.5280,elev:50,grid:'A3',icon:'🏠',terrain:'Far north campus. Uphill from central.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['Far north campus','Garrahy is in the north residential area','Main entrance — step-free']},
+  {id:'kappa_delta',name:'Kappa Delta',short:'Kappa Delta',cat:'Greek',access:'full',lat:41.4799,lng:-71.5312,elev:46,grid:'D2',icon:'🏛',terrain:'West campus. Gentle downhill heading west.',entrance:{side:'Main entrance',features:['Step-free'],warning:null},steps:['West campus near Boss lot','Kappa Delta house on the right','Main entrance — step-free']},
+  {id:'merrow',name:'Merrow Hall',short:'Merrow Hall',cat:'Residential',access:'full',lat:41.4834,lng:-71.5280,elev:51,grid:'B3',icon:'🏠',terrain:'North campus. Uphill from central.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['North residential area','Merrow Hall on the left','Main entrance — step-free']},
+  {id:'peck',name:'Peck Hall',short:'Peck Hall',cat:'Residential',access:'full',lat:41.4817,lng:-71.5280,elev:46,grid:'C3',icon:'🏠',terrain:'Central residential quad. Flat.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['Central residential quad','Peck Hall on the right','Main entrance — step-free']},
+  {id:'weldin',name:'Weldin Hall',short:'Weldin Hall',cat:'Residential',access:'full',lat:41.4800,lng:-71.5278,elev:44,grid:'D3',icon:'🏠',terrain:'Central residential quad. Flat.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['Residential quad','Weldin is near Eddy','Main entrance — step-free']},
+  {id:'wiley',name:'Wiley Hall',short:'Wiley Hall',cat:'Residential',access:'full',lat:41.4853,lng:-71.5278,elev:50,grid:'A3',icon:'🏠',terrain:'Far north campus. Uphill from central.',entrance:{side:'Main entrance',features:['Step-free','Elevator'],warning:null},steps:['Far north campus','Wiley is near Garrahy','Main entrance — step-free']},
+  {id:'edwards',name:'East Hall (Edwards)',short:'East Hall',cat:'Academic',access:'public',lat:41.4799,lng:-71.5224,elev:42,grid:'D5',icon:'🏫',terrain:'Central campus. Flat paved paths.',entrance:{side:'Main entrance',features:['Elevator available','Wide doorways'],warning:'Interior hallways very narrow — passing others requires clearing the corridor'},steps:['Head east on Lower College Rd — flat route','Edwards Hall is on the right','Enter main entrance — elevator and wide doorways','Note: interior corridors very narrow — allow extra maneuvering space']},
+  {id:'human_resources',name:'Human Resource Building',short:'HR Building',cat:'Academic',access:'public',lat:41.4817,lng:-71.5254,elev:44,grid:'C4',icon:'🏢',terrain:'Central campus. Flat paved paths.',entrance:{side:'Public entrance',features:['Public areas accessible'],warning:null},steps:['Central campus near the quad','HR Building on the north side','Public entrance accessible']},
+  {id:'newman',name:'Newman Hall',short:'Newman Hall',cat:'Residential',access:'public',lat:41.4778,lng:-71.5222,elev:39,grid:'E5',icon:'🏠',terrain:'South campus. Downhill from central.',entrance:{side:'Public entrance',features:['Public areas accessible'],warning:null},steps:['South campus','Newman Hall near the south entrance','Public areas accessible']},
+  {id:'tap_office',name:'44 Lower College Rd (Parking)',short:'Parking Office',cat:'Academic',access:'public',lat:41.4799,lng:-71.5252,elev:43,grid:'D4',icon:'🚗',terrain:'Central campus. Flat paved paths.',entrance:{side:'Public entrance',features:['Public areas accessible'],warning:null},steps:['On Lower College Rd near Memorial Union','Parking office is on the right','Public areas accessible']},
+  {id:'adams_house',name:'Adams House',short:'Adams House',cat:'Academic',access:'limited',lat:41.4799,lng:-71.5222,elev:42,grid:'D5',icon:'🏠',terrain:'Central campus. Flat paved paths.',entrance:{side:'Limited access',features:['Contact DAI for alternatives'],warning:null},steps:['East campus','Adams House on the right','Limited accessibility — contact DAI at (401) 874-2098']},
+  {id:'aldrich',name:'Aldrich Hall',short:'Aldrich Hall',cat:'Residential',access:'limited',lat:41.4834,lng:-71.5280,elev:51,grid:'B3',icon:'🏠',terrain:'North campus. Uphill from central.',entrance:{side:'Limited access',features:['No elevator'],warning:null},steps:['North residential area','Aldrich Hall on the right','Limited accessibility — contact DAI']},
+  {id:'burnside',name:'Burnside Hall',short:'Burnside Hall',cat:'Residential',access:'limited',lat:41.4833,lng:-71.5278,elev:51,grid:'B3',icon:'🏠',terrain:'North campus. Uphill from central.',entrance:{side:'Limited access',features:['No elevator'],warning:null},steps:['North residential area near Aldrich','Limited accessibility — contact DAI']},
+  {id:'christopher',name:'Christopher House',short:'Christopher House',cat:'Academic',access:'limited',lat:41.4779,lng:-71.5252,elev:40,grid:'E4',icon:'🏠',terrain:'South campus. Downhill from central.',entrance:{side:'Limited access',features:['No elevator'],warning:null},steps:['South campus','Christopher House on the left','Limited accessibility — contact DAI']},
+  {id:'coddington',name:'Coddington Hall',short:'Coddington',cat:'Residential',access:'limited',lat:41.4817,lng:-71.5312,elev:50,grid:'C2',icon:'🏠',terrain:'West campus. Steep slope from Plains Rd.',entrance:{side:'Limited access',features:['No elevator','Steep slope on west approach'],warning:'Very steep slope from Plains Rd — significant rollback risk for manual wheelchair users'},steps:['Steep terrain warning for this building','If approaching from Plains Rd: very steep — rollback risk','Try approaching from the east via Keaney Rd instead','Contact DAI at (401) 874-2098 to arrange accessible alternatives']},
+  {id:'coffee_house',name:'Coffee House',short:'Coffee House',cat:'Dining',access:'limited',lat:41.4799,lng:-71.5254,elev:43,grid:'D4',icon:'☕',terrain:'Central campus. Flat paved paths.',entrance:{side:'Single entrance',features:['Two-stage doors — first automatic, second manual'],warning:'Must hold first door while manually opening second — limited vestibule space'},steps:['Coffee House is just south of Memorial Union','Single entrance with two-stage doors','First door: automatic — wait for it to open fully','Second door: manual — reach while first door is still open']},
+  {id:'davis',name:'Davis Hall',short:'Davis Hall',cat:'Academic',access:'limited',lat:41.4817,lng:-71.5254,elev:44,grid:'C4',icon:'🏛',terrain:'Central campus. Flat paved paths.',entrance:{side:'Limited access',features:['Narrow doorways'],warning:null},steps:['Central campus','Davis Hall on the north side','Limited accessibility — contact DAI']},
+  {id:'dorr',name:'Dorr Hall',short:'Dorr Hall',cat:'Residential',access:'limited',lat:41.4817,lng:-71.5278,elev:46,grid:'C3',icon:'🏠',terrain:'Central residential quad. Flat.',entrance:{side:'Limited access',features:['No elevator'],warning:null},steps:['Central residential area','Dorr Hall on the right','Limited accessibility — contact DAI']},
+  {id:'ellery',name:'Ellery Hall',short:'Ellery Hall',cat:'Residential',access:'limited',lat:41.4816,lng:-71.5276,elev:46,grid:'C3',icon:'🏠',terrain:'Central residential quad. Flat.',entrance:{side:'Limited access',features:['No elevator'],warning:null},steps:['Central residential area near Dorr','Limited accessibility — contact DAI']},
+  {id:'fayerweather',name:'Fayerweather Hall',short:'Fayerweather',cat:'Residential',access:'limited',lat:41.4817,lng:-71.5280,elev:46,grid:'C3',icon:'🏠',terrain:'Central residential quad. Flat.',entrance:{side:'Limited access',features:['No elevator'],warning:null},steps:['Central residential area','Fayerweather Hall on the left','Limited accessibility — contact DAI']},
+  {id:'gorham',name:'Gorham Hall',short:'Gorham Hall',cat:'Residential',access:'limited',lat:41.4816,lng:-71.5282,elev:46,grid:'C3',icon:'🏠',terrain:'Central residential quad. Flat.',entrance:{side:'Limited access',features:['No elevator'],warning:null},steps:['Central residential area','Gorham Hall near Fayerweather','Limited accessibility — contact DAI']},
+  {id:'hart',name:'Hart House',short:'Hart House',cat:'Academic',access:'limited',lat:41.4778,lng:-71.5224,elev:39,grid:'E5',icon:'🏠',terrain:'South campus. Downhill from central.',entrance:{side:'Limited access',features:['No elevator'],warning:null},steps:['South campus','Hart House on the right','Limited accessibility — contact DAI']},
+  {id:'heathman',name:'Heathman Hall',short:'Heathman Hall',cat:'Residential',access:'limited',lat:41.4834,lng:-71.5278,elev:51,grid:'B3',icon:'🏠',terrain:'North campus. Uphill from central.',entrance:{side:'Limited access',features:['No elevator'],warning:null},steps:['North residential area','Heathman Hall on the left','Limited accessibility — contact DAI']},
+  {id:'hillside',name:'Hillside Hall',short:'Hillside Hall',cat:'Residential',access:'limited',lat:41.4779,lng:-71.5280,elev:41,grid:'E3',icon:'🏠',terrain:'South campus. Downhill from central quad.',entrance:{side:'Limited access',features:['Steep path required'],warning:'Notable slope on approach path'},steps:['Hillside is on the south slope of campus','Access path has noticeable downhill grade heading south','Uphill return will be challenging','Contact DAI for alternative arrangements']},
+  {id:'hopkins',name:'Hopkins Hall',short:'Hopkins Hall',cat:'Residential',access:'limited',lat:41.4817,lng:-71.5282,elev:46,grid:'C3',icon:'🏠',terrain:'Central residential quad. Flat.',entrance:{side:'Limited access',features:['No elevator'],warning:null},steps:['Central residential area near Hope Commons','Hopkins Hall on the right','Limited accessibility — contact DAI']},
+  {id:'hutchinson',name:'Hutchinson Hall',short:'Hutchinson Hall',cat:'Residential',access:'limited',lat:41.4817,lng:-71.5254,elev:44,grid:'C4',icon:'🏠',terrain:'Central campus. Flat paved paths.',entrance:{side:'Limited access',features:['No elevator'],warning:null},steps:['Central campus','Hutchinson Hall on the left','Limited accessibility — contact DAI']},
+  {id:'international_center',name:'International Center',short:'International Center',cat:'Academic',access:'limited',lat:41.4779,lng:-71.5252,elev:40,grid:'E4',icon:'🌍',terrain:'South campus. Downhill from central.',entrance:{side:'Limited access',features:['No elevator'],warning:null},steps:['South campus','International Center on the right','Limited accessibility — contact DAI']},
+  {id:'peckham_farm',name:'Peckham Farm',short:'Peckham Farm',cat:'Academic',access:'limited',lat:41.4779,lng:-71.5340,elev:44,grid:'E1',icon:'🌾',terrain:'Far southwest campus.',entrance:{side:'Limited access',features:['Outdoor/farm facility'],warning:null},steps:['Far west campus','Peckham Farm is at the southwest edge','Limited accessibility']},
+  {id:'tucker_hall',name:'Tucker Hall',short:'Tucker Hall',cat:'Residential',access:'limited',lat:41.4834,lng:-71.5252,elev:49,grid:'B4',icon:'🏠',terrain:'Upper campus. Uphill from central quad.',entrance:{side:'Limited access',features:['No elevator'],warning:null},steps:['North campus near library','Tucker Hall on the left','Limited accessibility — contact DAI']},
+  {id:'tucker_house',name:'Tucker House',short:'Tucker House',cat:'Academic',access:'limited',lat:41.4816,lng:-71.5222,elev:43,grid:'C5',icon:'🏠',terrain:'Central campus. Flat paved paths.',entrance:{side:'Limited access',features:['No elevator'],warning:null},steps:['East academic cluster','Tucker House on the right','Limited accessibility — contact DAI']},
+  {id:'univ_gateway',name:'University Gateway Apartments',short:'Gateway Apts',cat:'Residential',access:'limited',lat:41.4779,lng:-71.5222,elev:39,grid:'E5',icon:'🏠',terrain:'South campus. Downhill from central.',entrance:{side:'Limited access',features:['No elevator in main building'],warning:null},steps:['South campus near the main entrance','Gateway Apartments on the right','Limited accessibility — contact DAI']},
+  {id:'grad_village',name:'Graduate Village Apartments',short:'Grad Village',cat:'Residential',access:'limited',lat:41.4779,lng:-71.5340,elev:44,grid:'E1',icon:'🏠',terrain:'Far southwest campus.',entrance:{side:'Limited access',features:['Limited accessibility'],warning:null},steps:['Far southwest campus','Graduate Village at campus edge','Limited accessibility — contact DAI']},
+  {id:'washburn',name:'Washburn Hall',short:'Washburn Hall',cat:'Residential',access:'limited',lat:41.4816,lng:-71.5222,elev:43,grid:'C5',icon:'🏠',terrain:'Central campus. Flat paved paths.',entrance:{side:'Limited access',features:['No elevator'],warning:null},steps:['East academic cluster','Washburn Hall on the left','Limited accessibility — contact DAI']},
+  {id:'womens_center',name:"Women's Center",short:"Women's Center",cat:'Academic',access:'limited',lat:41.4779,lng:-71.5280,elev:41,grid:'E3',icon:'🏛',terrain:'South campus. Downhill from central.',entrance:{side:'Limited access',features:['No elevator'],warning:null},steps:['South campus on Fraternity Circle area',"Women's Center on the right",'Limited accessibility — contact DAI']},
+]
+
+
+// ─── ISSUES ───────────────────────────────────────────────────────────────
+let issues=[];
+try{issues=JSON.parse(localStorage.getItem('rampup_issues')||'[]');}catch{}
+if(!issues.length){issues=[
+  {id:'i1',building_id:'memorial_union',type:'door',desc:'North entrance door opener intermittent — strike mechanism to activate',ts:Date.now()-172800000},
+  {id:'i2',building_id:'ryan',type:'elevator',desc:'Floor 2 elevator pausing intermittently',ts:Date.now()-432000000},
+];}
+function hasIssue(id){return issues.some(i=>i.building_id===id)}
+function getBuildingIssues(id){return issues.filter(i=>i.building_id===id)}
+
+// ─── STATE ────────────────────────────────────────────────────────────────
+let userLat=41.4812,userLng=-71.5260,userElev=43,locationGranted=false; // 43m = central campus approx
+let currentBuilding=null,navMap=null,youMarker=null,destMarker=null,routeLine=null;
+let navViewMode='steps'; // 'steps' or 'map'
+let currentIssueType='door',leafletLoaded=false;
+let stepInterval=null;
+
+// ─── VIEWS ────────────────────────────────────────────────────────────────
+function goTo(id){
+  document.querySelectorAll('.view').forEach(v=>{
+    v.classList.toggle('hidden',v.id!==id);
+    v.classList.remove('gone-left');
+  });
+}
+function startOnboard(){goTo('v-location')}
+function skipToMain(){initMain();goTo('v-where')}
+function requestLocation(){
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      userLat=pos.coords.latitude;userLng=pos.coords.longitude;
+      if(pos.coords.altitude)userElev=pos.coords.altitude;
+      locationGranted=true;
+      document.getElementById('pc-loc').classList.add('show');
+      setTimeout(()=>{document.getElementById('pc-notif').classList.add('show');setTimeout(()=>{initMain();goTo('v-where')},700)},500);
+    },()=>{document.getElementById('pc-loc').classList.add('show');setTimeout(()=>{initMain();goTo('v-where')},600)});
+  } else {initMain();goTo('v-where')}
+}
+function initMain(){
+  updateLocDisplay();
+  renderList(sortedBuildings());
+  setupSearch();
+  if(!locationGranted&&navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      userLat=pos.coords.latitude;userLng=pos.coords.longitude;
+      if(pos.coords.altitude)userElev=pos.coords.altitude;
+      locationGranted=true;
+      updateLocDisplay();renderList(sortedBuildings());
+    },()=>{});
+  }
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────────────
+function dist(a,b,c,d){
+  const dLat=(c-a)*Math.PI/180,dLng=(d-b)*Math.PI/180;
+  const x=Math.sin(dLat/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLng/2)**2;
+  return 6371000*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+function distLabel(m){
+  if(m<50)return'Here';if(m<1000)return Math.round(m/50)*50+'m';return(m/1000).toFixed(1)+'km';
+}
+function sortedBuildings(){return[...BUILDINGS].sort((a,b)=>dist(userLat,userLng,a.lat,a.lng)-dist(userLat,userLng,b.lat,b.lng))}
+function updateLocDisplay(){
+  document.getElementById('loc-text').textContent=locationGranted?'Near Lower College Rd · URI Kingston':'URI Kingston Campus';
+}
+
+// ─── DIFFICULTY RENDERING ────────────────────────────────────────────────
+function diffBadgeHtml(d){
+  const dotsFilled=d.dots;
+  const dotsHtml=Array.from({length:4},(_,i)=>`<div class="diff-dot ${i<dotsFilled?'lit':''}" style="background:${d.color}"></div>`).join('');
+  return`<span class="diff-badge diff-${d.key}">${d.emoji} ${d.label}<span class="diff-dots" style="margin-left:5px">${dotsHtml}</span></span>`;
+}
+
+// ─── BUILDING LIST ────────────────────────────────────────────────────────
+function renderList(list){
+  const grid=document.getElementById('building-grid');
+  grid.innerHTML=list.map(b=>{
+    const d=dist(userLat,userLng,b.lat,b.lng);
+    const hi=hasIssue(b.id);
+    const icon=CAT_EMOJI[b.cat]||'🏢';
+    return`<div class="building-tile ${b.access}" onclick="startNav('${b.id}')">
+      <div class="tile-icon ${b.access}">${icon}</div>
+      <div class="tile-body">
+        <div class="tile-name">${b.short||b.name}</div>
+        <div class="tile-meta">
+          <span class="tile-tag ${b.access}">${ACCESS_LABEL[b.access]}</span>
+          <span class="tile-cat">${b.cat}</span>
+          ${hi?'<span class="tile-issue">⚑ Issue</span>':''}
+        </div>
+        <div style="margin-top:5px">${diffBadgeHtml(calcDirectionalDiff(userElev,b.elev,d))}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px;font-family:var(--font2)">${b.terrain}</div>
+      </div>
+      <div class="tile-right">
+        <span class="tile-dist">${distLabel(d)}</span>
+        <div class="tile-arrow">→</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setupSearch(){
+  const input=document.getElementById('dest-search');
+  input.addEventListener('input',()=>{
+    const q=input.value.toLowerCase().trim();
+    const label=document.getElementById('suggestions-label');
+    if(!q){label.textContent='Nearby & common';renderList(sortedBuildings());}
+    else{
+      label.textContent='Results';
+      const f=BUILDINGS.filter(b=>b.name.toLowerCase().includes(q)||(b.short&&b.short.toLowerCase().includes(q))||b.cat.toLowerCase().includes(q)||b.grid.toLowerCase().includes(q));
+      renderList(f.length?f:BUILDINGS);
+    }
+  });
+}
+
+// ─── NAVIGATION ───────────────────────────────────────────────────────────
+function startNav(id){
+  currentBuilding=BUILDINGS.find(b=>b.id===id);
+  if(!currentBuilding)return;
+  navViewMode='steps';
+  buildNavScreen();
+  goTo('v-nav');
+  // Pre-load Leaflet quietly
+  if(!leafletLoaded)loadLeaflet(()=>{});
+}
+
+// Directional difficulty: takes elevation delta into account
+// Going uphill = harder, downhill = easier (but warns about return)
+function calcDirectionalDiff(userElev, destElev, distMeters){
+  const elevDelta = destElev - userElev; // positive = uphill, negative = downhill
+  const grade = distMeters > 0 ? Math.abs(elevDelta) / distMeters : 0;
+  const isUphill = elevDelta > 2;
+  const isDownhill = elevDelta < -2;
+  const gradePercent = Math.round(grade * 100);
+
+  // Grade thresholds
+  // < 2%: easy, 2-5%: moderate, 5-8%: hard, >8%: expert
+  let level, dirNote;
+  if(gradePercent < 2){
+    level = {key:'easy',label:'Easy',emoji:'🟢',color:'#16a34a',bg:'#dcfce7',dots:1};
+    dirNote = 'Flat route';
+  } else if(gradePercent < 5){
+    if(isUphill){
+      level = {key:'mod',label:'Moderate',emoji:'🟡',color:'#b45309',bg:'#fef3c7',dots:2};
+      dirNote = 'Gentle uphill ('+gradePercent+'% grade)';
+    } else {
+      level = {key:'easy',label:'Easy downhill',emoji:'🟢',color:'#16a34a',bg:'#dcfce7',dots:1};
+      dirNote = 'Gentle downhill ('+gradePercent+'% grade) · uphill on return';
+    }
+  } else if(gradePercent < 9){
+    if(isUphill){
+      level = {key:'hard',label:'Hard',emoji:'🔴',color:'#b91c1c',bg:'#fee2e2',dots:3};
+      dirNote = 'Steep uphill ('+gradePercent+'% grade) — plan your energy';
+    } else {
+      level = {key:'mod',label:'Moderate downhill',emoji:'🟡',color:'#b45309',bg:'#fef3c7',dots:2};
+      dirNote = 'Downhill now ('+gradePercent+'% grade) · steep uphill on return';
+    }
+  } else {
+    if(isUphill){
+      level = {key:'expert',label:'Expert only',emoji:'🟣',color:'#6d28d9',bg:'#ede9fe',dots:4};
+      dirNote = 'Very steep uphill ('+gradePercent+'% grade) — rollback risk for manual chairs';
+    } else {
+      level = {key:'hard',label:'Hard downhill',emoji:'🔴',color:'#b91c1c',bg:'#fee2e2',dots:3};
+      dirNote = 'Very steep downhill ('+gradePercent+'%) — braking needed. Very steep uphill on return.';
+    }
+  }
+  // Override for flat
+  if(!isUphill && !isDownhill) dirNote = 'Flat route — easy both ways';
+  return {...level, dirNote, gradePercent, isUphill, isDownhill, elevDelta};
+}
+
+function buildNavScreen(){
+  const b=currentBuilding;
+  const col=ACCESS_COLOR[b.access];
+  const icon=b.entrance?.icon||'🏢';
+  const d=dist(userLat,userLng,b.lat,b.lng);
+
+  // route dest header
+  document.getElementById('route-dest').innerHTML=`
+    <div class="route-dest-icon" style="background:${col}18">${icon}</div>
+    <div style="flex:1">
+      <div class="route-dest-name">${b.name}</div>
+      <div class="route-dest-tag" style="color:${col}">${ACCESS_LABEL[b.access]} · ${b.entrance?.side||'Main entrance'}</div>
+    </div>`;
+
+  // difficulty card (top of steps panel)
+  const df=calcDirectionalDiff(userElev, b.elev, d);
+  const dotsFull=Array.from({length:4},(_,i)=>`<div class="ndc-dot ${i<df.dots?'lit':''}" style="background:${df.color}"></div>`).join('');
+  const dirArrow=df.isUphill?'↑ ':df.isDownhill?'↓ ':'→ ';
+  document.getElementById('nav-diff-card').innerHTML=`
+    <div class="ndc-icon-wrap" style="background:${df.bg}">${df.emoji}</div>
+    <div style="flex:1">
+      <div class="ndc-label" style="color:${df.color}">${dirArrow}${df.label}</div>
+      <div class="ndc-title" style="color:${df.color};font-size:15px">${df.dirNote}</div>
+      <div class="ndc-detail">${b.terrain}</div>
+      <div class="ndc-dots">${dotsFull}</div>
+    </div>`;
+  document.getElementById('nav-diff-card').style.background=df.bg;
+
+  // map bottom strip
+  document.getElementById('mbs-name').textContent=b.name;
+  document.getElementById('mbs-meta').textContent=`${distLabel(d)} away · ${b.entrance?.side||'Main entrance'}`;
+  document.getElementById('mbs-diff').innerHTML=diffBadgeHtml(df);
+
+  // steps
+  const steps=b.steps||['Head to '+b.name,'Use the accessible entrance'];
+  document.getElementById('step-cards').innerHTML=steps.map((s,i)=>`
+    <div class="step-card ${i===0?'active-step':''}" id="step-${i}">
+      <div class="step-num ${i===0?'current':'upcoming'}">${i===0?i+1:i+1}</div>
+      <div>
+        <div class="step-text">${s}</div>
+        ${i===0?`<div class="step-sub">Starting point · ${distLabel(d)} to destination</div>`:''}
+      </div>
+    </div>`).join('');
+
+  // entrance
+  const ent=b.entrance;
+  if(ent){
+    const feats=ent.features||[];
+    document.getElementById('entrance-detail').innerHTML=`
+      <div class="ent-label">At your destination</div>
+      <div class="ent-title">${ent.side}</div>
+      <div class="ent-features">
+        ${feats.map(f=>`<span class="ent-feat">${f}</span>`).join('')}
+        ${ent.warning?`<span class="ent-feat warn">⚠ ${ent.warning}</span>`:''}
+      </div>`;
+    document.getElementById('entrance-detail').classList.add('show');
+  }
+
+  // animate steps
+  if(stepInterval)clearInterval(stepInterval);
+  let step=1;
+  stepInterval=setInterval(()=>{
+    const cards=document.querySelectorAll('.step-card');
+    if(step<=1){}
+    const prev=document.getElementById('step-'+(step-1));
+    if(prev){prev.classList.remove('active-step');const n=prev.querySelector('.step-num');if(n){n.className='step-num done';n.textContent='✓';}}
+    const cur=document.getElementById('step-'+step);
+    if(cur){cur.classList.add('active-step');const n=cur.querySelector('.step-num');if(n)n.className='step-num current';}
+    step++;if(step>=cards.length){clearInterval(stepInterval);stepInterval=null;}
+  },3500);
+
+  // apply initial view
+  applyNavView();
+}
+
+// ─── MAP / STEPS TOGGLE ───────────────────────────────────────────────────
+function setNavView(mode){
+  navViewMode=mode;
+  applyNavView();
+  if(mode==='map'){
+    if(!leafletLoaded){
+      loadLeaflet(()=>{
+        // wait for panel to be visible then init
+        requestAnimationFrame(()=>requestAnimationFrame(()=>initNavMap()));
+      });
+    } else if(!navMap){
+      requestAnimationFrame(()=>requestAnimationFrame(()=>initNavMap()));
+    }
+    // applyNavView already calls invalidateSize after rAF
+  }
+}
+
+function applyNavView(){
+  const isMap=navViewMode==='map';
+  document.getElementById('vt-steps').classList.toggle('active',!isMap);
+  document.getElementById('vt-map').classList.toggle('active',isMap);
+  document.getElementById('steps-panel').classList.toggle('hidden',isMap);
+  document.getElementById('map-panel').classList.toggle('hidden',!isMap);
+  document.getElementById('route-card').classList.toggle('hidden',isMap);
+  document.getElementById('map-bottom-strip').classList.toggle('hidden',!isMap);
+  // After DOM update, fix map size
+  if(isMap && navMap){
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      navMap.invalidateSize({animate:false});
+      updateMapMarkers();
+    }));
+  }
+}
+
+// ─── LEAFLET MAP ──────────────────────────────────────────────────────────
+function loadLeaflet(cb){
+  if(leafletLoaded){cb();return;}
+  const s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+  s.onload=()=>{leafletLoaded=true;cb();};
+  s.onerror=()=>{document.getElementById('nav-map').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);flex-direction:column;gap:8px;font-size:13px"><div style="font-size:40px">🗺</div>Map needs internet</div>';};
+  document.head.appendChild(s);
+}
+
+function initNavMap(){
+  const el=document.getElementById('nav-map');
+  if(!el||!window.L)return;
+  // Destroy stale map instance to avoid size/tile glitches
+  if(navMap){navMap.remove();navMap=null;youMarker=null;destMarker=null;routeLine=null;}
+  // Wipe container
+  el.innerHTML='';
+  navMap=L.map(el,{
+    center:[currentBuilding?currentBuilding.lat:userLat, currentBuilding?currentBuilding.lng:userLng],
+    zoom:16,zoomControl:true,attributionControl:true,
+    preferCanvas:true
+  });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+    attribution:'© <a href="https://openstreetmap.org">OSM</a> © <a href="https://carto.com">CARTO</a>',
+    subdomains:'abcd',maxZoom:20,crossOrigin:true
+  }).addTo(navMap);
+  navMap.whenReady(()=>{
+    navMap.invalidateSize({animate:false});
+    updateMapMarkers();
+  });
+}
+
+function updateMapMarkers(){
+  if(!navMap||!currentBuilding)return;
+  const b=currentBuilding;
+  const df=b.diff;
+
+  if(youMarker)navMap.removeLayer(youMarker);
+  youMarker=L.marker([userLat,userLng],{
+    icon:L.divIcon({html:'<div class="you-dot"></div>',className:'',iconSize:[18,18],iconAnchor:[9,9]})
+  }).addTo(navMap).bindPopup('📍 You are here');
+
+  if(destMarker)navMap.removeLayer(destMarker);
+  const col=ACCESS_COLOR[b.access];
+  const destHtml=`<div style="background:${col};color:#fff;font-size:12px;font-weight:800;padding:7px 12px;border-radius:20px;white-space:nowrap;box-shadow:0 3px 14px ${col}60;border:2px solid white;display:flex;align-items:center;gap:5px"><span>${b.entrance?.icon||'🏢'}</span><span>${b.short||b.name}</span></div>`;
+  destMarker=L.marker([b.lat,b.lng],{
+    icon:L.divIcon({html:destHtml,className:'',iconAnchor:[50,16]})
+  }).addTo(navMap).bindPopup(b.name+' — '+ACCESS_LABEL[b.access]);
+
+  // Route line colored by difficulty
+  if(routeLine)navMap.removeLayer(routeLine);
+  const dynDf=calcDirectionalDiff(userElev,b.elev,dist(userLat,userLng,b.lat,b.lng));
+  routeLine=L.polyline([[userLat,userLng],[b.lat,b.lng]],{
+    color:dynDf.color,weight:5,opacity:.85,dashArray:'12 6',lineCap:'round',lineJoin:'round'
+  }).addTo(navMap);
+  navMap.fitBounds([[userLat,userLng],[b.lat,b.lng]],{padding:[80,100],maxZoom:17});
+
+  navMap.fitBounds([[userLat,userLng],[b.lat,b.lng]],{padding:[70,90]});
+}
+
+// ─── ARRIVE ───────────────────────────────────────────────────────────────
+function simulateArrive(){
+  if(stepInterval){clearInterval(stepInterval);stepInterval=null;}
+  const b=currentBuilding;if(!b)return;
+  const ent=b.entrance||{side:'Main entrance',features:[],icon:'🏢'};
+  const bIssues=getBuildingIssues(b.id);
+  document.getElementById('arrived-bldg').textContent=b.name;
+  document.getElementById('entrance-big-card').innerHTML=`
+    <div class="ebc-row">
+      <div class="ebc-icon">${ent.icon}</div>
+      <div><div class="ebc-title">${ent.side}</div><div class="ebc-desc">${ent.features&&ent.features.length?ent.features.slice(0,2).join(' · '):'Use the accessible entrance.'}</div></div>
+    </div>
+    <div class="feat-wrap">
+      ${(ent.features||[]).map(f=>`<span class="feat-pill">${f}</span>`).join('')}
+      ${ent.warning?`<span class="feat-pill warn">⚠ ${ent.warning}</span>`:''}
+    </div>`;
+  const iw=document.getElementById('issue-warn');
+  if(bIssues.length){
+    iw.classList.add('show');
+    document.getElementById('iwt').textContent='Active issue reported here';
+    document.getElementById('iws').textContent=bIssues[0].desc;
+  } else {iw.classList.remove('show');}
+  spawnConfetti();
+  goTo('v-arrived');
+}
+
+function spawnConfetti(){
+  const c=document.getElementById('confetti');c.innerHTML='';
+  const cols=['#3b82f6','#22c55e','#f59e0b','#ec4899','#a78bfa','#fff','#34d399'];
+  for(let i=0;i<28;i++){
+    const el=document.createElement('div');el.className='confetti-piece';
+    el.style.cssText=`left:${Math.random()*100}%;width:${6+Math.random()*7}px;height:${6+Math.random()*7}px;background:${cols[Math.floor(Math.random()*cols.length)]};animation-duration:${2.5+Math.random()*2.5}s;animation-delay:${Math.random()*1.2}s;border-radius:${Math.random()>.5?'50%':'3px'}`;
+    c.appendChild(el);
+  }
+}
+
+// ─── REPORT ───────────────────────────────────────────────────────────────
+function openReportSheet(){document.getElementById('sheet-overlay').classList.add('open')}
+function closeSheet(e){if(e.target===document.getElementById('sheet-overlay'))document.getElementById('sheet-overlay').classList.remove('open')}
+function selType(el){document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('sel'));el.classList.add('sel');currentIssueType=el.dataset.type}
+function submitIssue(){
+  const b=currentBuilding;
+  const desc=document.getElementById('issue-desc').value.trim()||'No description.';
+  const titles={door:'Door/opener issue',elevator:'Elevator issue',path:'Path blocked',other:'Accessibility barrier'};
+  issues.unshift({id:'u'+Date.now(),building_id:b?.id||'unknown',type:currentIssueType,desc,ts:Date.now()});
+  try{localStorage.setItem('rampup_issues',JSON.stringify(issues))}catch{}
+  document.getElementById('sheet-overlay').classList.remove('open');
+  document.getElementById('issue-desc').value='';
+  const btn=document.querySelector('.btn-submit');
+  btn.textContent='✓ Reported — thank you!';btn.style.background='#16a34a';
+  setTimeout(()=>{btn.textContent='Submit report';btn.style.background=''},2500);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────
+window.addEventListener('load',()=>{renderList(sortedBuildings());setupSearch()});
+</script>
+</body>
+</html>
