@@ -171,25 +171,41 @@ html,body{height:100%;overflow:hidden;background:var(--dark);font-family:var(--f
   background:var(--panel);
   border-radius:24px 24px 0 0;
   box-shadow:0 -8px 40px rgba(0,0,0,.7);
-  overflow:hidden;
-  /* KEY: sheet only takes bottom ~55% — map always visible above */
-  height:56vh;
+  /* Full height always — we TRANSLATE it up/down, never resize */
+  /* This means the map is ALWAYS fully rendered behind it */
+  height:100%;
   display:flex;flex-direction:column;
-  transition:height .38s cubic-bezier(.32,.72,0,1);
+  will-change:transform;
+  /* translateY(X%) means X% of screen is sheet, (100-X)% is map above */
+  /* Default home: sheet top at 52vh from top → 48vh visible */
+  transform:translateY(52%);
+  transition:transform .42s cubic-bezier(.22,1,.36,1);
+  overflow:hidden;
 }
-.sheet.expanded{height:88vh;}
-.sheet.nav-mode{height:72vh;}
-.sheet.nav-mode.expanded{height:88vh;}
-.sheet-handle{
-  width:36px;height:4px;background:var(--border2);
-  border-radius:2px;margin:10px auto 0;flex-shrink:0;cursor:grab;
-}
-.sheet-handle:active{cursor:grabbing}
+/* Home state — building list, ~48vh of sheet visible */
+.sheet.home{ transform:translateY(52%); }
+/* Nav peek — just header+GO+stats visible (~34vh of sheet) */
+.sheet.nav-peek{ transform:translateY(66%); }
+/* Nav mid — header+stats+steps visible (~64vh of sheet) */
+.sheet.nav-mid{ transform:translateY(36%); }
+/* Nav full — almost full screen steps */
+.sheet.nav-full{ transform:translateY(9%); }
 
-/* Sheet in nav mode (after tapping a building) */
-.sheet.nav-mode .home-content{display:none}
-.sheet.nav-mode .nav-content{display:flex}
-.nav-content{display:none;flex-direction:column;flex:1;overflow-y:auto}
+.sheet-handle{
+  width:40px;height:4px;background:var(--border2);
+  border-radius:2px;margin:12px auto 0;flex-shrink:0;cursor:grab;
+  flex-shrink:0;
+}
+.sheet-handle:active{background:var(--blue);cursor:grabbing}
+
+/* Sheet in nav mode */
+.sheet.nav-peek .home-content,
+.sheet.nav-mid .home-content,
+.sheet.nav-full .home-content{display:none}
+.sheet.nav-peek .nav-content,
+.sheet.nav-mid .nav-content,
+.sheet.nav-full .nav-content{display:flex}
+.nav-content{display:none;flex-direction:column;overflow-y:auto;flex:1}
 .nav-content::-webkit-scrollbar{display:none}
 
 /* ── HOME SHEET CONTENT ───────────────────── */
@@ -922,13 +938,13 @@ function addRouteMarkers(b) {
     color: df.color, weight: 5, opacity: .85, dashArray: '12 8', lineCap: 'round'
   }).addTo(navMap);
 
-  // Fit bounds but pad to keep map visible above the sheet (sheet takes ~55vh)
-  const appH = document.getElementById('app').getBoundingClientRect().height;
-  const sheetH = document.getElementById('sheet').getBoundingClientRect().height;
-  const mapVisibleH = appH - sheetH;
+  // In nav-peek mode the top ~66% of screen is map
+  // Pad bottom heavily so route line isn't hidden behind sheet
+  const winH = window.innerHeight;
+  const mapH = winH * 0.66; // roughly how much map is visible in peek state
   navMap.fitBounds([[userLat,userLng],[b.lat,b.lng]], {
-    paddingTopLeft: [40, mapVisibleH * 0.1],
-    paddingBottomRight: [40, mapVisibleH * 0.3],
+    paddingTopLeft: [32, 60],
+    paddingBottomRight: [32, Math.round(mapH * 0.35)],
     maxZoom: 17, animate: true, duration: 0.8
   });
 }
@@ -1076,27 +1092,27 @@ function buildNavSheet(b) {
 
 function openNavSheet() {
   const sheet = document.getElementById('sheet');
-  sheet.classList.add('nav-mode');
-  sheet.style.height = ''; // let CSS nav-mode height rule apply
+  // Remove home state, add nav-peek (sheet floats at bottom ~34vh, map fills top 66%)
+  sheet.classList.remove('home');
+  sheet.classList.add('nav-peek');
   document.getElementById('fab-close-nav').style.display = 'flex';
-  document.getElementById('search-bar').style.top = '-100px';
-  // Invalidate map after sheet resize
-  setTimeout(() => { if(navMap) navMap.invalidateSize({animate:false}); }, 400);
+  document.getElementById('search-bar').style.top = '-200px';
+  // After animation, invalidate map — it now has much more space
+  setTimeout(() => { if(navMap) navMap.invalidateSize({animate:false}); }, 450);
 }
 
 function closeNav() {
   if (stepInterval) { clearInterval(stepInterval); stepInterval=null; }
   const sheet = document.getElementById('sheet');
-  sheet.classList.remove('nav-mode');
+  sheet.classList.remove('nav-peek','nav-mid','nav-full');
+  sheet.classList.add('home');
+  sheet.style.transform = '';
   document.getElementById('fab-close-nav').style.display = 'none';
   document.getElementById('search-bar').style.top = `calc(70px + var(--st))`;
-  const sheetEl = document.getElementById('sheet');
-  sheetEl.style.height = '';
-  sheetEl.classList.remove('expanded');
   currentBuilding = null;
   if (routeLine && navMap) { navMap.removeLayer(routeLine); routeLine=null; }
   if (destMarker && navMap) { navMap.removeLayer(destMarker); destMarker=null; }
-  setTimeout(() => { if(navMap) navMap.invalidateSize({animate:false}); }, 400);
+  setTimeout(() => { if(navMap) navMap.invalidateSize({animate:false}); }, 450);
   renderList();
 }
 
@@ -1186,33 +1202,104 @@ function updateAlertPill() {
 }
 
 // ── SHEET DRAG ─────────────────────────────────────────────────────
-// Simple touch drag to resize sheet
-const handle = document.getElementById('sheet-handle');
-const sheet = document.getElementById('sheet');
-let dragY0 = 0, sheetH0 = 0;
-handle.addEventListener('touchstart', e => {
-  dragY0 = e.touches[0].clientY;
-  sheetH0 = sheet.getBoundingClientRect().height;
-}, {passive:true});
-handle.addEventListener('touchmove', e => {
-  const dy = dragY0 - e.touches[0].clientY;
-  const newH = Math.min(Math.max(sheetH0 + dy, 140), window.innerHeight * .88);
-  sheet.style.height = newH + 'px';
-}, {passive:true});
-handle.addEventListener('touchend', e => {
-  // Snap to nearest state
-  const h = sheet.getBoundingClientRect().height;
-  const winH = window.innerHeight;
-  if (h > winH * .75) {
-    sheet.classList.add('expanded');
-  } else if (h < winH * .35) {
-    sheet.style.height = '';
-    sheet.classList.remove('expanded');
+// Transit-style: drag moves sheet via transform translateY
+// Sheet is always full height — only Y position changes
+// This means the map behind is always fully rendered and pannable
+
+const sheetEl = document.getElementById('sheet');
+const handleEl = document.getElementById('sheet-handle');
+
+// Snap points (% of screen height that becomes the translateY value)
+// Lower number = sheet higher up = less map visible
+const SNAP = { home:52, peek:66, mid:36, full:9 };
+
+let _dragStartY = 0, _dragStartTY = 0, _isDragging = false, _lastTY = 0, _velY = 0, _lastT = 0;
+
+function getCurrentTY() {
+  const style = window.getComputedStyle(sheetEl);
+  const m = new WebKitCSSMatrix ? new WebKitCSSMatrix(style.transform) : new DOMMatrix(style.transform);
+  return (m.m42 / window.innerHeight) * 100; // as %
+}
+
+function setSheetTY(pct, animate) {
+  if (animate) {
+    sheetEl.style.transition = 'transform .42s cubic-bezier(.22,1,.36,1)';
   } else {
-    sheet.style.height = '';
-    sheet.classList.remove('expanded');
+    sheetEl.style.transition = 'none';
   }
-}, {passive:true});
+  sheetEl.style.transform = `translateY(${pct}%)`;
+  _lastTY = pct;
+}
+
+function snapSheet(ty) {
+  // Determine which mode the sheet is in
+  const isNav = sheetEl.classList.contains('nav-peek') ||
+                sheetEl.classList.contains('nav-mid') ||
+                sheetEl.classList.contains('nav-full');
+  
+  let snapped;
+  if (!isNav) {
+    // Home mode: only home snap, or close to dismiss
+    snapped = ty > 75 ? 100 : SNAP.home;
+  } else {
+    // Nav mode: snap to peek/mid/full
+    if (ty > 80) {
+      // Dragged way down → go back to home (close nav)
+      closeNav(); return;
+    } else if (ty > 56) snapped = SNAP.peek;
+    else if (ty > 22)  snapped = SNAP.mid;
+    else               snapped = SNAP.full;
+    
+    // Update class
+    sheetEl.classList.remove('nav-peek','nav-mid','nav-full');
+    if (snapped === SNAP.peek)     sheetEl.classList.add('nav-peek');
+    else if (snapped === SNAP.mid) sheetEl.classList.add('nav-mid');
+    else                           sheetEl.classList.add('nav-full');
+  }
+  
+  setSheetTY(snapped, true);
+  sheetEl.style.transition = '';
+  // Tell leaflet map how much space it has
+  setTimeout(() => { if(navMap) navMap.invalidateSize({animate:false}); }, 450);
+}
+
+function onDragStart(clientY) {
+  _isDragging = true;
+  _dragStartY = clientY;
+  _dragStartTY = getCurrentTY();
+  _lastTY = _dragStartTY;
+  _lastT = Date.now();
+  _velY = 0;
+  sheetEl.style.transition = 'none'; // disable for live dragging
+}
+
+function onDragMove(clientY) {
+  if (!_isDragging) return;
+  const now = Date.now();
+  const dy = clientY - _dragStartY; // px moved since drag start
+  const dyPct = (dy / window.innerHeight) * 100;
+  const newTY = Math.max(5, Math.min(92, _dragStartTY + dyPct));
+  _velY = (newTY - _lastTY) / Math.max(1, now - _lastT);
+  _lastTY = newTY;
+  _lastT = now;
+  sheetEl.style.transform = `translateY(${newTY}%)`;
+}
+
+function onDragEnd() {
+  if (!_isDragging) return;
+  _isDragging = false;
+  // Use velocity to predict where finger was "flicking" to
+  const projectedTY = _lastTY + _velY * 120; // extrapolate 120ms
+  snapSheet(projectedTY);
+}
+
+// Touch events on the handle (for drag-up to expand)
+handleEl.addEventListener('touchstart', e => onDragStart(e.touches[0].clientY), {passive:true});
+handleEl.addEventListener('touchmove',  e => { e.preventDefault(); onDragMove(e.touches[0].clientY); }, {passive:false});
+handleEl.addEventListener('touchend',   () => onDragEnd(), {passive:true});
+
+// Mouse events for desktop testing
+handleEl.addEventListener('mousedown', e => { onDragStart(e.clientY); document.addEventListener('mousemove', _mm=e2=>onDragMove(e2.clientY)); document.addEventListener('mouseup', _mu=()=>{onDragEnd();document.removeEventListener('mousemove',_mm);document.removeEventListener('mouseup',_mu);},{once:true}); });
 
 // ── TOAST ──────────────────────────────────────────────────────────
 let toastTimer;
@@ -1242,6 +1329,8 @@ window.addEventListener('load', () => {
     }, ()=>{});
   }
 
+  // Set initial sheet state
+  document.getElementById('sheet').classList.add('home');
   renderList();
   updateAlertPill();
 
