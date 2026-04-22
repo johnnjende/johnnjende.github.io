@@ -3,486 +3,654 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
-<meta name="theme-color" content="#1a1f2e">
+<meta name="theme-color" content="#0d1b2e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>RampUp · URI Campus Navigation</title>
+<meta name="apple-mobile-web-app-title" content="RampUp">
+<title>RampUp · URI Access</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
+/* ── RESET ──────────────────────────────── */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
-  --bg:#f5f0eb;--bg2:#ede7df;--card:#ffffff;
-  --blue:#2563eb;--blue-l:#dbeafe;--blue-d:#1d4ed8;
-  --green:#16a34a;--green-l:#dcfce7;
-  --amber:#d97706;--amber-l:#fef3c7;
-  --red:#dc2626;--red-l:#fee2e2;
-  --uri:#002147;--uri-a:#75B2DD;
-  /* Difficulty colors — like trail ratings */
-  --easy:#22c55e;--easy-l:#dcfce7;
-  --mod:#f59e0b;--mod-l:#fef3c7;
-  --hard:#ef4444;--hard-l:#fee2e2;
-  --expert:#7c3aed;--expert-l:#ede9fe;
-  --text:#1c1c1e;--text2:#3c3c43;--text3:#8e8e93;
-  --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.15);
-  --shadow:0 4px 24px rgba(0,0,0,0.10),0 1px 4px rgba(0,0,0,0.06);
-  --shadow-lg:0 12px 48px rgba(0,0,0,0.14),0 2px 8px rgba(0,0,0,0.08);
-  --r:20px;--rl:28px;--rxl:36px;
-  --font:'Nunito',sans-serif;--font2:'Nunito Sans',sans-serif;
-  --safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);
+  --dark:#0d1b2e;
+  --dark2:#112236;
+  --dark3:#162e48;
+  --panel:#0f2035;
+  --panel2:#132840;
+  --blue:#1a9fff;
+  --blue2:#1488d8;
+  --blue-dim:rgba(26,159,255,.15);
+  --blue-dim2:rgba(26,159,255,.25);
+  --green:#1aff8c;
+  --green-dim:rgba(26,255,140,.15);
+  --amber:#ffbe1a;
+  --amber-dim:rgba(255,190,26,.15);
+  --red:#ff4a4a;
+  --red-dim:rgba(255,74,74,.15);
+  --purple:#a855f7;
+  --purple-dim:rgba(168,85,247,.15);
+  --uri-navy:#002147;
+  --text:#ffffff;
+  --text2:rgba(255,255,255,.75);
+  --text3:rgba(255,255,255,.45);
+  --text4:rgba(255,255,255,.25);
+  --border:rgba(255,255,255,.08);
+  --border2:rgba(255,255,255,.14);
+  --font:'Nunito',sans-serif;
+  --font2:'Nunito Sans',sans-serif;
+  --st:env(safe-area-inset-top,0px);
+  --sb:env(safe-area-inset-bottom,0px);
+  --r:16px;--rl:22px;--rxl:28px;
 }
-html,body{height:100%;overflow:hidden;background:var(--bg);font-family:var(--font);color:var(--text)}
-#app{height:100dvh;height:100vh;max-width:430px;margin:0 auto;display:flex;flex-direction:column;position:relative;overflow:hidden;background:var(--bg)}
+html,body{height:100%;overflow:hidden;background:var(--dark);font-family:var(--font);color:var(--text)}
+#app{
+  height:100dvh;height:100vh;
+  max-width:430px;margin:0 auto;
+  position:relative;overflow:hidden;
+  background:var(--dark);
+}
 
-/* ── VIEWS ── */
-.view{position:absolute;inset:0;display:flex;flex-direction:column;transition:transform .42s cubic-bezier(.32,.72,0,1),opacity .3s;will-change:transform}
-.view.hidden{transform:translateY(100%);opacity:0;pointer-events:none}
-.view.gone-left{transform:translateX(-60px);opacity:0;pointer-events:none}
+/* ── MAP (always the canvas) ─────────────── */
+#map{
+  position:absolute;inset:0;z-index:0;
+  background:var(--dark);
+}
+#map-placeholder{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:10px;color:var(--text3);font-size:13px;
+  background:radial-gradient(ellipse at 40% 40%,#0d2a44 0%,#070f1a 100%);
+}
+.map-grid-line{
+  position:absolute;background:rgba(26,159,255,.04);
+}
 
-/* ── WELCOME ── */
-#v-welcome{background:linear-gradient(160deg,#1a2744 0%,#0f1825 100%);align-items:center;justify-content:flex-end;padding:0 0 calc(44px + var(--safe-b))}
-.blob{position:absolute;border-radius:50%;animation:float 6s ease-in-out infinite}
-.blob1{width:300px;height:300px;background:radial-gradient(circle,rgba(59,130,246,.35) 0%,transparent 70%);top:-80px;right:-90px}
-.blob2{width:200px;height:200px;background:radial-gradient(circle,rgba(96,165,250,.25) 0%,transparent 70%);top:140px;left:-70px;animation-delay:2s}
-.blob3{width:180px;height:180px;background:radial-gradient(circle,rgba(52,211,153,.2) 0%,transparent 70%);top:80px;right:50px;animation-delay:4s}
-@keyframes float{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-18px) scale(1.04)}}
-.welcome-art{position:absolute;inset:0;overflow:hidden;pointer-events:none}
-.welcome-mascot{font-size:100px;line-height:1;filter:drop-shadow(0 8px 24px rgba(0,0,0,.3));animation:mascot-in .8s cubic-bezier(.34,1.56,.64,1) .2s both}
-@keyframes mascot-in{from{transform:scale(.3) translateY(40px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
-.welcome-content{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;width:100%;padding:0 32px}
-.welcome-badge{background:rgba(117,178,221,.2);border:1px solid rgba(117,178,221,.3);border-radius:20px;padding:5px 14px;font-size:11px;font-weight:800;color:var(--uri-a);letter-spacing:.8px;text-transform:uppercase;margin-bottom:16px;animation:fadein .5s .5s both}
-@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.welcome-title{font-size:44px;font-weight:900;color:#fff;line-height:1.05;text-align:center;margin-bottom:10px;letter-spacing:-.5px;animation:fadein .5s .65s both}
-.welcome-title span{color:var(--uri-a)}
-.welcome-sub{font-size:16px;font-weight:600;color:rgba(255,255,255,.6);text-align:center;line-height:1.55;margin-bottom:34px;font-family:var(--font2);animation:fadein .5s .8s both}
-.btn-primary{width:100%;padding:18px;border-radius:var(--rl);border:none;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-family:var(--font);font-size:17px;font-weight:800;cursor:pointer;box-shadow:0 8px 32px rgba(37,99,235,.4);transition:transform .12s;display:flex;align-items:center;justify-content:center;gap:8px;animation:fadein .5s .95s both}
-.btn-primary:active{transform:scale(.97)}
-.btn-secondary{background:none;border:none;color:rgba(255,255,255,.45);font-family:var(--font2);font-size:14px;font-weight:600;cursor:pointer;margin-top:14px;padding:8px;animation:fadein .5s 1.1s both}
+/* Leaflet overrides for dark mode */
+.leaflet-tile{filter:brightness(.55) saturate(.7) hue-rotate(180deg) invert(1) hue-rotate(180deg) contrast(.85)}
+.leaflet-control-zoom{border:none!important;box-shadow:none!important;display:none}
+.leaflet-control-attribution{display:none!important}
+.you-ring{
+  width:22px;height:22px;border-radius:50%;
+  background:#1a9fff;border:3px solid #fff;
+  box-shadow:0 0 0 6px rgba(26,159,255,.3);
+  animation:you-pulse 2s infinite;
+}
+@keyframes you-pulse{
+  0%,100%{box-shadow:0 0 0 4px rgba(26,159,255,.25)}
+  50%{box-shadow:0 0 0 12px rgba(26,159,255,0)}
+}
 
-/* ── LOCATION SCREEN ── */
-#v-location{background:var(--bg);padding:calc(24px + var(--safe-t)) 24px 0}
-.top-bar{display:flex;align-items:center;gap:10px;margin-bottom:28px}
-.back-btn{width:38px;height:38px;border-radius:50%;background:var(--card);border:none;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;box-shadow:var(--shadow);flex-shrink:0}
-.screen-title{font-size:21px;font-weight:900;color:var(--text)}
-.loc-card{background:var(--card);border-radius:var(--rl);padding:28px 24px;box-shadow:var(--shadow);text-align:center;margin-bottom:16px}
-.loc-icon-wrap{width:72px;height:72px;border-radius:50%;background:var(--blue-l);display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 16px;position:relative}
-.loc-icon-wrap::before,.loc-icon-wrap::after{content:'';position:absolute;inset:-8px;border-radius:50%;background:var(--blue-l);animation:ripple 2s ease-out infinite}
-.loc-icon-wrap::after{animation-delay:.6s}
-@keyframes ripple{0%{transform:scale(.85);opacity:.7}100%{transform:scale(1.4);opacity:0}}
-.loc-title{font-size:19px;font-weight:900;color:var(--text);margin-bottom:7px}
-.loc-sub{font-size:14px;color:var(--text3);line-height:1.55;font-family:var(--font2)}
-.perm-list{display:flex;flex-direction:column;gap:10px;margin-top:20px}
-.perm-row{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--bg);border-radius:var(--r)}
-.perm-icon{font-size:20px;width:28px;text-align:center;flex-shrink:0}
-.perm-text{font-size:13px;font-weight:800;color:var(--text2)}
-.perm-sub{font-size:11px;color:var(--text3);margin-top:1px;font-family:var(--font2)}
-.perm-check{margin-left:auto;color:var(--green);font-size:18px;opacity:0;transition:opacity .3s}
-.perm-check.show{opacity:1}
+/* ── TOP UI (floats over map) ─────────────── */
+.top-ui{
+  position:absolute;top:0;left:0;right:0;z-index:100;
+  padding:calc(14px + var(--st)) 16px 0;
+  pointer-events:none;
+}
+.top-ui>*{pointer-events:all}
 
-/* ── WHERE SCREEN ── */
-#v-where{background:var(--bg)}
-.where-header{background:linear-gradient(160deg,#1a2744,#0f1825);padding:calc(18px + var(--safe-t)) 24px 22px}
-.where-header .screen-title{color:#fff}
-.where-header .top-bar{margin-bottom:14px}
-.where-sub-h{font-size:13px;color:rgba(255,255,255,.55);font-family:var(--font2);font-weight:600;margin-top:2px}
-.loc-display{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:var(--r);padding:11px 14px}
-.loc-pulse-dot{width:10px;height:10px;border-radius:50%;background:#34d399;flex-shrink:0;animation:glow 1.5s infinite}
-@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,.6)}50%{box-shadow:0 0 0 6px rgba(52,211,153,0)}}
-.loc-text{font-size:12px;color:rgba(255,255,255,.85);font-weight:700}
-.where-body{padding:16px 18px 0;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.where-body::-webkit-scrollbar{display:none}
-.search-bar{display:flex;align-items:center;gap:10px;background:var(--card);border:1.5px solid var(--border2);border-radius:var(--r);padding:13px 16px;box-shadow:var(--shadow);margin-bottom:14px}
-.search-icon{font-size:16px;color:var(--text3)}
-#dest-search{flex:1;border:none;outline:none;font-family:var(--font);font-size:15px;font-weight:700;color:var(--text);background:none}
-#dest-search::placeholder{color:var(--text3);font-weight:600}
-.section-label{font-size:11px;font-weight:800;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin:0 4px 10px;display:block}
+/* Avatar / branding pill */
+.brand-pill{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--panel2);border:1px solid var(--border2);
+  border-radius:20px;padding:6px 14px 6px 6px;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);
+}
+.brand-icon{
+  width:30px;height:30px;border-radius:50%;
+  background:linear-gradient(135deg,#1a9fff,#0066cc);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;
+}
+.brand-name{font-size:14px;font-weight:800;color:var(--text);letter-spacing:-.2px}
+.brand-sub{font-size:10px;font-weight:700;color:var(--blue);letter-spacing:.4px;text-transform:uppercase}
 
-/* ── BUILDING TILE ── */
-.building-grid{display:flex;flex-direction:column;gap:9px;margin-bottom:24px}
-.building-tile{display:flex;align-items:center;gap:13px;background:var(--card);border-radius:var(--rl);padding:14px 15px;cursor:pointer;transition:transform .1s,box-shadow .1s;box-shadow:0 2px 10px rgba(0,0,0,0.06);border:1.5px solid transparent}
-.building-tile:active{transform:scale(.98);box-shadow:var(--shadow)}
-.building-tile.full{border-color:rgba(22,163,74,.2)}
-.building-tile.public{border-color:rgba(217,119,6,.2)}
-.building-tile.limited{border-color:rgba(220,38,38,.15)}
-.tile-icon{width:44px;height:44px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
-.tile-icon.full{background:var(--green-l)}
-.tile-icon.public{background:var(--amber-l)}
-.tile-icon.limited{background:var(--red-l)}
-.tile-body{flex:1;min-width:0}
-.tile-name{font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px;line-height:1.2}
-.tile-meta{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
-.tile-tag{font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px}
-.tile-tag.full{background:var(--green-l);color:var(--green)}
-.tile-tag.public{background:var(--amber-l);color:var(--amber)}
-.tile-tag.limited{background:var(--red-l);color:var(--red)}
-.tile-cat{font-size:11px;color:var(--text3);font-weight:600}
-.tile-issue{font-size:10px;font-weight:800;color:#ea580c;background:#fff7ed;border-radius:8px;padding:2px 7px}
+/* Issue alert bar (like "Detour in effect") */
+.alert-pill{
+  display:none;align-items:center;gap:7px;
+  background:var(--amber);border-radius:20px;
+  padding:7px 14px;font-size:12px;font-weight:800;
+  color:#000;cursor:pointer;
+  box-shadow:0 4px 20px rgba(255,190,26,.4);
+  margin-top:10px;width:fit-content;
+}
+.alert-pill.show{display:inline-flex;animation:fadein .3s}
+@keyframes fadein{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.alert-dot{width:6px;height:6px;border-radius:50%;background:#000;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* ── DIFFICULTY BADGE (the new thing!) ── */
+/* FAB buttons (right rail — like Transit's pin/bell/locate) */
+.fab-rail{
+  position:absolute;right:14px;z-index:100;
+  display:flex;flex-direction:column;gap:9px;
+  top:calc(80px + var(--st));
+}
+.fab{
+  width:42px;height:42px;border-radius:50%;
+  background:var(--panel2);border:1px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;cursor:pointer;
+  box-shadow:0 4px 16px rgba(0,0,0,.5);
+  transition:all .15s;
+}
+.fab:active{transform:scale(.92);background:var(--dark3)}
+.fab.active{background:var(--blue);border-color:var(--blue);box-shadow:0 4px 20px rgba(26,159,255,.5)}
+
+/* ── SEARCH BAR (hovers in map) ───────────── */
+.search-bar{
+  position:absolute;left:16px;right:70px;z-index:100;
+  transition:top .4s cubic-bezier(.32,.72,0,1);
+}
+.search-inner{
+  display:flex;align-items:center;gap:10px;
+  background:var(--panel);border:1.5px solid var(--border2);
+  border-radius:var(--rl);padding:13px 16px;
+  box-shadow:0 8px 32px rgba(0,0,0,.6),0 2px 8px rgba(0,0,0,.4);
+  cursor:pointer;
+  transition:border-color .15s;
+}
+.search-inner:focus-within{border-color:var(--blue)}
+.search-icon{font-size:17px;flex-shrink:0;color:var(--text3)}
+#search-input{
+  flex:1;border:none;outline:none;
+  font-family:var(--font);font-size:15px;font-weight:700;
+  color:var(--text);background:transparent;
+}
+#search-input::placeholder{color:var(--text3);font-weight:700}
+
+/* ── BOTTOM SHEET ────────────────────────── */
+/*
+  3 states:
+  .peek    — just the handle + first row peeks up
+  .partial — shows the building list (default home state)
+  .full    — fully open
+*/
+.sheet{
+  position:absolute;left:0;right:0;bottom:0;z-index:200;
+  background:var(--panel);
+  border-radius:24px 24px 0 0;
+  transition:transform .38s cubic-bezier(.32,.72,0,1);
+  /* height is set by content; transform moves it */
+  box-shadow:0 -8px 40px rgba(0,0,0,.7);
+  overflow:hidden;
+  max-height:88vh;
+  display:flex;flex-direction:column;
+}
+.sheet-handle{
+  width:36px;height:4px;background:var(--border2);
+  border-radius:2px;margin:10px auto 0;flex-shrink:0;cursor:grab;
+}
+.sheet-handle:active{cursor:grabbing}
+
+/* Sheet in nav mode (after tapping a building) */
+.sheet.nav-mode .home-content{display:none}
+.sheet.nav-mode .nav-content{display:flex}
+.nav-content{display:none;flex-direction:column;flex:1;overflow-y:auto}
+.nav-content::-webkit-scrollbar{display:none}
+
+/* ── HOME SHEET CONTENT ───────────────────── */
+.home-content{display:flex;flex-direction:column;flex:1;overflow:hidden}
+
+/* "Where to?" heading row */
+.where-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px 10px;flex-shrink:0;
+}
+.where-title{font-size:22px;font-weight:900;color:var(--text);letter-spacing:-.3px}
+.where-count{
+  font-size:11px;font-weight:700;color:var(--blue);
+  background:var(--blue-dim);border-radius:12px;padding:3px 9px;
+}
+
+/* Filter chips */
+.filter-row{
+  display:flex;gap:7px;padding:0 18px 12px;
+  overflow-x:auto;scrollbar-width:none;flex-shrink:0;
+}
+.filter-row::-webkit-scrollbar{display:none}
+.chip{
+  white-space:nowrap;padding:7px 14px;border-radius:18px;
+  font-family:var(--font);font-size:12px;font-weight:700;
+  cursor:pointer;transition:all .15s;flex-shrink:0;
+  border:1.5px solid var(--border2);
+  background:var(--panel2);color:var(--text3);
+}
+.chip:active{transform:scale(.95)}
+.chip.on{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 2px 12px rgba(26,159,255,.4)}
+.chip.issue-chip.on{background:var(--amber);border-color:var(--amber);color:#000}
+
+/* Building list */
+.blist{flex:1;overflow-y:auto;padding:0 0 calc(16px + var(--sb));-webkit-overflow-scrolling:touch}
+.blist::-webkit-scrollbar{display:none}
+
+.brow{
+  display:flex;align-items:center;
+  padding:13px 18px;
+  border-top:1px solid var(--border);
+  cursor:pointer;transition:background .1s;
+  gap:14px;
+}
+.brow:first-child{border-top:none}
+.brow:active{background:rgba(255,255,255,.04)}
+
+/* Big number style (like Transit's "66") */
+.brow-num{
+  width:52px;flex-shrink:0;text-align:center;
+}
+.brow-num-text{
+  font-size:26px;font-weight:900;line-height:1;
+  letter-spacing:-.5px;
+}
+.brow-num-text.full{color:var(--green)}
+.brow-num-text.public{color:var(--amber)}
+.brow-num-text.limited{color:var(--red)}
+.brow-icon-sub{font-size:11px;margin-top:2px;color:var(--text3);font-weight:700}
+
+.brow-body{flex:1;min-width:0}
+.brow-name{font-size:15px;font-weight:800;color:var(--text);line-height:1.2;margin-bottom:3px}
+.brow-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tier-tag{
+  font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px;
+  letter-spacing:.1px;
+}
+.tier-full{background:rgba(26,255,140,.15);color:var(--green)}
+.tier-public{background:rgba(255,190,26,.15);color:var(--amber)}
+.tier-limited{background:rgba(255,74,74,.15);color:var(--red)}
+.brow-cat{font-size:10px;color:var(--text3);font-weight:600}
+.issue-badge{
+  font-size:9px;font-weight:800;color:var(--amber);
+  background:var(--amber-dim);border-radius:6px;padding:2px 6px;
+}
+
+/* Difficulty badge */
 .diff-badge{
   display:inline-flex;align-items:center;gap:4px;
-  font-size:10px;font-weight:800;padding:3px 8px;border-radius:10px;
-  border:1.5px solid;
+  font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;
 }
-.diff-easy{background:var(--easy-l);color:#15803d;border-color:rgba(34,197,94,.3)}
-.diff-mod{background:var(--mod-l);color:#b45309;border-color:rgba(245,158,11,.35)}
-.diff-hard{background:var(--hard-l);color:#b91c1c;border-color:rgba(239,68,68,.3)}
-.diff-expert{background:var(--expert-l);color:#6d28d9;border-color:rgba(124,58,237,.3)}
+.diff-easy{background:rgba(26,255,140,.12);color:var(--green)}
+.diff-mod{background:rgba(255,190,26,.12);color:var(--amber)}
+.diff-hard{background:rgba(255,74,74,.12);color:var(--red)}
+.diff-expert{background:rgba(168,85,247,.12);color:var(--purple)}
 
-/* difficulty dots (like ski trail) */
-.diff-dots{display:flex;align-items:center;gap:2px}
-.diff-dot{width:8px;height:8px;border-radius:50%;opacity:.3}
-.diff-dot.lit{opacity:1}
+.brow-right{text-align:right;flex-shrink:0}
+.brow-dist{font-size:13px;font-weight:700;color:var(--text3)}
+.brow-arrow{font-size:14px;color:var(--text4);margin-top:4px}
 
-.tile-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0}
-.tile-dist{font-size:12px;font-weight:700;color:var(--text3)}
-.tile-arrow{width:28px;height:28px;border-radius:50%;background:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:12px}
-
-/* ── DIFFICULTY EXPLAINER STRIP ── */
-.diff-explainer{
-  background:var(--card);border-radius:var(--rl);padding:14px 16px;
-  margin-bottom:14px;border:1.5px solid var(--border);
-  display:flex;flex-direction:column;gap:10px;
+/* ── NAV SHEET CONTENT ────────────────────── */
+/* Header: Route number + name + GO button */
+.nav-header{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:14px 18px 12px;flex-shrink:0;
+  border-bottom:1px solid var(--border);
 }
-.diff-explainer-title{font-size:11px;font-weight:900;color:var(--text3);letter-spacing:.7px;text-transform:uppercase;margin-bottom:2px}
-.diff-row{display:flex;align-items:center;gap:10px}
-.diff-row-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:900}
-.diff-row-text{font-size:12px;font-weight:700;color:var(--text2);flex:1}
-.diff-row-sub{font-size:10px;color:var(--text3);font-family:var(--font2)}
-
-/* ── NAV SCREEN ── */
-#v-nav{background:var(--bg);flex-direction:column}
-.nav-top-bar{
-  position:absolute;top:calc(14px + var(--safe-t));left:14px;right:14px;
-  z-index:600;display:flex;align-items:center;justify-content:space-between;
+.nav-route-num{
+  font-size:48px;font-weight:900;line-height:1;
+  letter-spacing:-1px;flex-shrink:0;
 }
-/* Map / Steps toggle */
-.view-toggle{
-  display:flex;background:rgba(255,255,255,.95);border-radius:20px;padding:3px;
-  box-shadow:var(--shadow-lg);gap:2px;
-}
-.vt-btn{
-  padding:7px 14px;border-radius:17px;border:none;background:none;
-  font-family:var(--font);font-size:12px;font-weight:800;color:var(--text3);
-  cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:5px;
-}
-.vt-btn.active{background:var(--uri);color:var(--uri-a);box-shadow:0 2px 8px rgba(0,33,71,.25)}
-.vt-btn .vt-icon{font-size:14px}
+.nav-route-num.full{color:var(--green)}
+.nav-route-num.public{color:var(--amber)}
+.nav-route-num.limited{color:var(--red)}
+.nav-route-info{flex:1;min-width:0}
+.nav-direction{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.nav-arrow-icon{width:22px;height:22px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.nav-dest-name{font-size:17px;font-weight:900;color:var(--text);line-height:1.2}
+.nav-sub{font-size:12px;color:var(--text3);font-family:var(--font2);margin-top:2px}
 
-/* Map panel */
-.map-panel{position:absolute;inset:0;z-index:1}
-.map-panel.hidden{display:none}
-#nav-map{width:100%;height:100%;background:#e8ecf4;min-height:1px}
-
-/* Steps panel */
-.steps-panel{
-  position:absolute;inset:0;z-index:2;
-  background:var(--bg);
-  overflow-y:auto;-webkit-overflow-scrolling:touch;
-  padding:calc(70px + var(--safe-t)) 18px 0;
+.go-btn{
+  width:62px;height:62px;border-radius:18px;border:none;
+  background:var(--blue);color:#fff;
+  font-family:var(--font);font-size:18px;font-weight:900;
+  cursor:pointer;flex-shrink:0;
+  box-shadow:0 6px 24px rgba(26,159,255,.55);
+  transition:transform .12s;
+  display:flex;align-items:center;justify-content:center;
 }
-.steps-panel::-webkit-scrollbar{display:none}
-.steps-panel.hidden{display:none}
+.go-btn:active{transform:scale(.93)}
 
-/* Difficulty card at top of steps */
-.nav-diff-card{
-  border-radius:var(--rl);padding:16px 18px;margin-bottom:14px;
-  display:flex;align-items:center;gap:14px;
+/* Stat tiles (like Transit's "12 min / 55 min scheduled / 18:46") */
+.stat-row{
+  display:flex;gap:8px;padding:12px 18px;flex-shrink:0;
+  overflow-x:auto;scrollbar-width:none;
 }
-.ndc-icon-wrap{
-  width:52px;height:52px;border-radius:var(--rl);
-  display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;
+.stat-row::-webkit-scrollbar{display:none}
+.stat-tile{
+  flex-shrink:0;border-radius:var(--r);padding:12px 14px;
+  min-width:90px;
 }
-.ndc-label{font-size:11px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;margin-bottom:3px}
-.ndc-title{font-size:18px;font-weight:900;line-height:1.1;margin-bottom:4px}
-.ndc-detail{font-size:12px;font-family:var(--font2);line-height:1.5;opacity:.75}
-.ndc-dots{display:flex;gap:4px;margin-top:6px}
-.ndc-dot{width:10px;height:10px;border-radius:50%;opacity:.25;transition:opacity .3s}
-.ndc-dot.lit{opacity:1}
-
-/* Floating route card (bottom sheet) */
-.route-card{
-  position:absolute;bottom:0;left:0;right:0;z-index:500;
-  background:var(--card);border-radius:28px 28px 0 0;
-  box-shadow:0 -8px 40px rgba(0,0,0,0.15);
-  padding:0 20px calc(16px + var(--safe-b));
-  max-height:52%;overflow-y:auto;
+.stat-tile-primary{background:var(--blue);box-shadow:0 4px 20px rgba(26,159,255,.4)}
+.stat-tile-secondary{background:var(--panel2);border:1px solid var(--border2)}
+.stat-tile-warn{background:var(--amber);box-shadow:0 4px 16px rgba(255,190,26,.3)}
+.stat-num{font-size:32px;font-weight:900;line-height:1;letter-spacing:-.5px}
+.stat-tile-primary .stat-num{color:#fff}
+.stat-tile-secondary .stat-num{color:var(--text2)}
+.stat-tile-warn .stat-num{color:#000;font-size:14px}
+.stat-label{font-size:11px;font-weight:700;margin-top:3px}
+.stat-tile-primary .stat-label{color:rgba(255,255,255,.7)}
+.stat-tile-secondary .stat-label{color:var(--text3)}
+.stat-tile-warn .stat-label{color:rgba(0,0,0,.6);font-size:11px;font-weight:800}
+.stat-sublabel{
+  font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+  margin-top:5px;opacity:.6;
 }
-.route-card::-webkit-scrollbar{display:none}
-.route-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 16px}
-.route-dest{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
-.route-dest-icon{width:44px;height:44px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
-.route-dest-name{font-size:17px;font-weight:900;color:var(--text);line-height:1.2;margin-bottom:3px}
-.route-dest-tag{font-size:12px;font-weight:700}
 
-.step-cards{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
-.step-card{display:flex;align-items:flex-start;gap:12px;background:var(--bg);border-radius:var(--r);padding:12px 13px;border:1.5px solid transparent;transition:all .3s}
-.step-card.active-step{background:#fff;border-color:var(--blue-l);box-shadow:0 2px 12px rgba(37,99,235,.1)}
-.step-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;margin-top:1px}
-.step-num.done{background:var(--green-l);color:var(--green)}
-.step-num.current{background:var(--blue);color:#fff;animation:step-pulse 1.5s infinite}
-@keyframes step-pulse{0%,100%{box-shadow:0 0 0 0 rgba(37,99,235,.4)}50%{box-shadow:0 0 0 6px rgba(37,99,235,0)}}
-.step-num.upcoming{background:var(--bg2);color:var(--text3)}
-.step-text{font-size:13px;font-weight:700;color:var(--text);line-height:1.4}
-.step-sub{font-size:11px;color:var(--text3);font-family:var(--font2);margin-top:2px;line-height:1.4}
+/* Alert row */
+.nav-alerts{
+  display:flex;gap:8px;padding:0 18px 10px;flex-wrap:wrap;flex-shrink:0;
+}
+.nav-alert-pill{
+  display:flex;align-items:center;gap:6px;border-radius:12px;
+  padding:7px 12px;font-size:12px;font-weight:800;cursor:pointer;
+}
+.nav-alert-warn{background:var(--amber);color:#000;box-shadow:0 3px 12px rgba(255,190,26,.3)}
+.nav-alert-info{background:var(--panel2);border:1px solid var(--border2);color:var(--text2)}
 
-.entrance-detail{background:linear-gradient(135deg,var(--uri),#003a7a);border-radius:var(--rl);padding:14px 16px;margin-bottom:12px;display:none}
-.entrance-detail.show{display:block}
-.ent-label{font-size:9px;font-weight:800;color:rgba(255,255,255,.5);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px}
-.ent-title{font-size:15px;font-weight:900;color:#fff;margin-bottom:7px}
+/* Step timeline */
+.step-timeline{
+  padding:8px 18px calc(20px + var(--sb));flex:1;
+}
+.step-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:4px}
+.step-dot-col{
+  display:flex;flex-direction:column;align-items:center;
+  width:20px;flex-shrink:0;padding-top:4px;
+}
+.step-dot{
+  width:14px;height:14px;border-radius:50%;flex-shrink:0;
+  border:2.5px solid var(--border2);background:var(--panel);
+  transition:all .3s;
+}
+.step-dot.done{background:var(--green);border-color:var(--green);box-shadow:0 0 8px rgba(26,255,140,.5)}
+.step-dot.active{
+  background:var(--blue);border-color:var(--blue);
+  box-shadow:0 0 12px rgba(26,159,255,.7);
+  animation:dot-pulse 1.5s infinite;
+}
+@keyframes dot-pulse{
+  0%,100%{box-shadow:0 0 8px rgba(26,159,255,.5)}
+  50%{box-shadow:0 0 18px rgba(26,159,255,.9)}
+}
+.step-dot.upcoming{background:transparent;border-color:var(--border2)}
+.step-line{
+  width:2px;flex:1;min-height:32px;margin:3px 0;
+  background:var(--border2);border-radius:1px;
+  transition:background .3s;
+}
+.step-line.done{background:var(--green)}
+.step-line.active{background:linear-gradient(var(--blue),var(--border2))}
+.step-content{flex:1;padding-bottom:20px}
+.step-time{
+  font-size:10px;font-weight:700;color:var(--blue);
+  letter-spacing:.4px;text-transform:uppercase;margin-bottom:3px;
+}
+.step-text{font-size:14px;font-weight:700;color:var(--text);line-height:1.4}
+.step-subtext{font-size:12px;color:var(--text3);font-family:var(--font2);line-height:1.4;margin-top:3px}
+.step-entrance-card{
+  background:var(--panel2);border:1px solid var(--border2);
+  border-radius:var(--r);padding:11px 13px;margin-top:8px;
+}
+.ent-label{font-size:9px;font-weight:800;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px}
+.ent-side{font-size:13px;font-weight:800;color:var(--text);margin-bottom:7px}
 .ent-features{display:flex;flex-wrap:wrap;gap:5px}
-.ent-feat{background:rgba(255,255,255,.12);border-radius:10px;padding:4px 9px;font-size:11px;font-weight:700;color:rgba(255,255,255,.9)}
-.ent-feat.warn{background:rgba(234,88,12,.25);color:#fed7aa}
-
-.nav-btn-row{display:flex;gap:9px}
-.btn-ghost{flex:1;padding:14px;border-radius:var(--r);background:var(--bg2);border:none;font-family:var(--font);font-size:13px;font-weight:800;color:var(--text2);cursor:pointer}
-.btn-arrive{flex:2;padding:14px;border-radius:var(--r);background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;font-family:var(--font);font-size:14px;font-weight:800;color:#fff;cursor:pointer;box-shadow:0 4px 16px rgba(37,99,235,.35);transition:transform .1s}
-.btn-arrive:active{transform:scale(.98)}
-
-/* Map-mode bottom strip (compact, when map is showing) */
-.map-bottom-strip{
-  position:absolute;bottom:0;left:0;right:0;z-index:550;
-  background:var(--card);border-radius:24px 24px 0 0;
-  padding:0 18px calc(14px + var(--safe-b));
-  box-shadow:0 -6px 24px rgba(0,0,0,.12);
+.ent-feat{
+  background:var(--blue-dim);border:1px solid rgba(26,159,255,.2);
+  border-radius:8px;padding:3px 9px;font-size:10px;font-weight:700;color:var(--blue);
 }
-.mbs-handle{width:32px;height:4px;background:var(--border);border-radius:2px;margin:10px auto 12px}
-.mbs-row{display:flex;align-items:center;gap:12px}
-.mbs-dest{flex:1}
-.mbs-name{font-size:15px;font-weight:900;color:var(--text);margin-bottom:2px}
-.mbs-meta{font-size:12px;color:var(--text3);font-family:var(--font2)}
-.mbs-diff{flex-shrink:0}
-.mbs-btn{padding:11px 18px;border-radius:var(--r);background:linear-gradient(135deg,#3b82f6,#2563eb);border:none;font-family:var(--font);font-size:13px;font-weight:800;color:#fff;cursor:pointer;white-space:nowrap}
+.ent-feat.warn{background:var(--amber-dim);border-color:rgba(255,190,26,.2);color:var(--amber)}
 
-/* ── ARRIVED SCREEN ── */
-#v-arrived{background:linear-gradient(160deg,#052e16 0%,#14532d 100%);align-items:center;justify-content:center;padding:calc(24px + var(--safe-t)) 24px calc(32px + var(--safe-b))}
+/* ── REPORT BTN (in nav) ──────────────────── */
+.report-row{
+  padding:0 18px 14px;flex-shrink:0;
+}
+.report-btn{
+  width:100%;padding:13px;border-radius:var(--rl);
+  background:var(--panel2);border:1.5px solid var(--border2);
+  font-family:var(--font);font-size:13px;font-weight:800;color:var(--text3);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.report-btn:active{background:var(--dark3)}
+
+/* ── ARRIVED OVERLAY ─────────────────────── */
+#arrived-overlay{
+  position:absolute;inset:0;z-index:500;
+  display:none;flex-direction:column;
+  align-items:center;justify-content:flex-end;
+  padding-bottom:calc(32px + var(--sb));
+}
+#arrived-overlay.show{display:flex;animation:overfadein .4s}
+@keyframes overfadein{from{opacity:0}to{opacity:1}}
+.arrived-bg{
+  position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 60%,rgba(26,255,140,.18) 0%,rgba(13,27,46,.95) 60%);
+}
+.arrived-content{
+  position:relative;z-index:1;text-align:center;
+  width:100%;padding:0 24px;
+}
 .confetti-wrap{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-.confetti-piece{position:absolute;width:8px;height:8px;border-radius:2px;animation:fall linear infinite}
+.cp{position:absolute;border-radius:2px;animation:fall linear infinite}
 @keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
-.arrived-big{font-size:88px;margin-bottom:10px;animation:pop .5s cubic-bezier(.34,1.56,.64,1) both}
-@keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
-.arrived-h{font-size:32px;font-weight:900;color:#fff;text-align:center;margin-bottom:6px;animation:fadein .4s .3s both;line-height:1.1}
-.arrived-bldg{font-size:16px;font-weight:700;color:rgba(255,255,255,.7);text-align:center;margin-bottom:24px;font-family:var(--font2);animation:fadein .4s .45s both}
-.entrance-big-card{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.15);border-radius:var(--rl);padding:18px;width:100%;margin-bottom:14px;animation:fadein .4s .6s both}
-.ebc-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px}
-.ebc-icon{font-size:26px}
-.ebc-title{font-size:15px;font-weight:900;color:#fff;margin-bottom:3px}
-.ebc-desc{font-size:12px;color:rgba(255,255,255,.7);line-height:1.5;font-family:var(--font2)}
-.feat-wrap{display:flex;flex-wrap:wrap;gap:6px}
-.feat-pill{background:rgba(255,255,255,.12);border-radius:12px;padding:4px 10px;font-size:11px;font-weight:700;color:rgba(255,255,255,.9)}
-.feat-pill.warn{background:rgba(234,88,12,.25);color:#fed7aa}
-.issue-warn{background:rgba(234,88,10,.2);border:1px solid rgba(234,88,10,.3);border-radius:var(--r);padding:12px 14px;width:100%;margin-bottom:14px;display:none;gap:10px;align-items:flex-start;animation:fadein .4s .7s both}
-.issue-warn.show{display:flex}
-.iwt{font-size:13px;font-weight:800;color:#fed7aa;margin-bottom:2px}
-.iws{font-size:12px;color:rgba(255,255,255,.6);font-family:var(--font2)}
-.arrived-actions{width:100%;display:flex;flex-direction:column;gap:9px;animation:fadein .4s .8s both}
-.btn-w{padding:15px;border-radius:var(--r);border:none;background:rgba(255,255,255,.14);color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;text-align:center}
-.btn-ws{padding:15px;border-radius:var(--r);border:none;background:#fff;color:var(--green);font-family:var(--font);font-size:15px;font-weight:900;cursor:pointer}
+.arrived-big{font-size:72px;margin-bottom:8px;animation:pop .5s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+.arrived-title{font-size:34px;font-weight:900;color:#fff;margin-bottom:6px;animation:fadein .4s .3s both}
+.arrived-bldg{font-size:16px;color:rgba(255,255,255,.7);font-family:var(--font2);margin-bottom:24px;animation:fadein .4s .45s both}
+.arrived-card{
+  background:rgba(255,255,255,.06);backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.12);border-radius:var(--rl);
+  padding:18px;margin-bottom:16px;text-align:left;
+  animation:fadein .4s .6s both;
+}
+.arrived-ent-side{font-size:16px;font-weight:900;color:#fff;margin-bottom:10px}
+.arrived-feats{display:flex;flex-wrap:wrap;gap:6px}
+.arrived-feat{
+  background:rgba(26,159,255,.2);border:1px solid rgba(26,159,255,.3);
+  border-radius:10px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--blue);
+}
+.arrived-feat.warn{background:rgba(255,190,26,.2);border-color:rgba(255,190,26,.3);color:var(--amber)}
+.arrived-issue{
+  background:rgba(255,190,26,.15);border:1px solid rgba(255,190,26,.25);
+  border-radius:var(--r);padding:10px 12px;margin-bottom:12px;
+  display:none;gap:8px;align-items:flex-start;animation:fadein .4s .7s both;
+}
+.arrived-issue.show{display:flex}
+.ai-title{font-size:12px;font-weight:800;color:var(--amber);margin-bottom:2px}
+.ai-desc{font-size:11px;color:rgba(255,255,255,.6);font-family:var(--font2)}
+.arrived-actions{display:flex;flex-direction:column;gap:9px;width:100%;animation:fadein .4s .8s both}
+.btn-dark{
+  width:100%;padding:15px;border-radius:var(--rl);border:1px solid rgba(255,255,255,.15);
+  background:rgba(255,255,255,.08);color:#fff;font-family:var(--font);font-size:14px;font-weight:800;cursor:pointer;
+}
+.btn-green{
+  width:100%;padding:15px;border-radius:var(--rl);border:none;
+  background:var(--green);color:#000;font-family:var(--font);font-size:15px;font-weight:900;cursor:pointer;
+}
+.arrived-back{
+  position:absolute;top:calc(16px + var(--st));left:14px;z-index:2;
+}
 
-/* ── REPORT SHEET ── */
-.sheet-overlay{position:absolute;inset:0;z-index:900;background:rgba(0,0,0,.45);display:none;align-items:flex-end}
-.sheet-overlay.open{display:flex}
-.bottom-sheet{background:var(--card);border-radius:28px 28px 0 0;width:100%;padding:0 20px calc(20px + var(--safe-b));animation:slideup .3s cubic-bezier(.32,.72,0,1)}
+/* ── REPORT SHEET ─────────────────────────── */
+.rsheet-overlay{
+  position:absolute;inset:0;z-index:600;
+  background:rgba(0,0,0,.5);
+  display:none;align-items:flex-end;
+}
+.rsheet-overlay.open{display:flex;animation:fadein .2s}
+.rsheet{
+  background:var(--panel);border-radius:24px 24px 0 0;width:100%;
+  padding:0 18px calc(18px + var(--sb));
+  animation:slideup .3s cubic-bezier(.32,.72,0,1);
+}
 @keyframes slideup{from{transform:translateY(100%)}to{transform:translateY(0)}}
-.sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:12px auto 16px}
-.sheet-title{font-size:19px;font-weight:900;color:var(--text);margin-bottom:5px}
-.sheet-sub{font-size:13px;color:var(--text3);font-family:var(--font2);margin-bottom:16px}
-.type-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
-.type-btn{padding:13px 10px;border-radius:var(--r);border:2px solid var(--border);background:var(--bg);cursor:pointer;text-align:center;transition:all .12s}
-.type-btn.sel{border-color:var(--blue);background:var(--blue-l)}
-.type-btn-icon{font-size:22px;margin-bottom:4px}
-.type-btn-label{font-size:12px;font-weight:800;color:var(--text2)}
-.sheet-ta{width:100%;padding:13px;font-family:var(--font2);font-size:13px;color:var(--text);background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r);resize:none;min-height:75px;outline:none;margin-bottom:13px}
-.sheet-ta:focus{border-color:var(--blue)}
-.btn-submit{width:100%;padding:15px;border-radius:var(--r);border:none;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer}
+.rsheet-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:12px auto 16px}
+.rsheet-title{font-size:18px;font-weight:900;color:var(--text);margin-bottom:5px}
+.rsheet-sub{font-size:13px;color:var(--text3);font-family:var(--font2);margin-bottom:16px}
+.rtype-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.rtype{
+  padding:13px;border-radius:var(--r);border:1.5px solid var(--border2);
+  background:var(--panel2);cursor:pointer;text-align:center;transition:all .12s;
+}
+.rtype.on{border-color:var(--blue);background:var(--blue-dim)}
+.rtype:active{transform:scale(.97)}
+.rtype-icon{font-size:22px;margin-bottom:4px}
+.rtype-lbl{font-size:12px;font-weight:800;color:var(--text2)}
+.rta{
+  width:100%;padding:12px 13px;font-family:var(--font2);font-size:13px;
+  color:var(--text);background:var(--panel2);border:1.5px solid var(--border2);
+  border-radius:var(--r);resize:none;min-height:75px;outline:none;margin-bottom:13px;
+}
+.rta:focus{border-color:var(--blue)}
+.rsubmit{
+  width:100%;padding:15px;border-radius:var(--rl);border:none;
+  background:var(--blue);color:#fff;font-family:var(--font);font-size:15px;font-weight:800;cursor:pointer;
+  box-shadow:0 4px 20px rgba(26,159,255,.4);transition:transform .12s;
+}
+.rsubmit:active{transform:scale(.97)}
 
-/* ── LEAFLET OVERRIDES ── */
-.you-dot{width:18px;height:18px;border-radius:50%;background:#3b82f6;border:3px solid #fff;box-shadow:0 0 0 5px rgba(59,130,246,.25);animation:you-pulse 2s infinite}
-@keyframes you-pulse{0%,100%{box-shadow:0 0 0 4px rgba(59,130,246,.2)}50%{box-shadow:0 0 0 10px rgba(59,130,246,0)}}
-.leaflet-control-zoom{border:none!important;box-shadow:var(--shadow)!important}
-.leaflet-control-zoom a{font-size:16px!important;line-height:28px!important;width:30px!important;height:30px!important;font-family:var(--font)!important}
-.leaflet-control-zoom a:first-child{border-radius:10px 10px 0 0!important}
-.leaflet-control-zoom a:last-child{border-radius:0 0 10px 10px!important}
-.leaflet-control-attribution{font-size:9px!important;background:rgba(255,255,255,.7)!important;border-radius:6px 0 0 0!important}
+/* ── UTILITY ──────────────────────────────── */
 ::-webkit-scrollbar{display:none}
+.hidden{display:none!important}
 </style>
 </head>
 <body>
 <div id="app">
 
-<!-- ── WELCOME ──────────────────────────────── -->
-<div id="v-welcome" class="view">
-  <div class="welcome-art">
-    <div class="blob blob1"></div><div class="blob blob2"></div><div class="blob blob3"></div>
-    <svg style="position:absolute;bottom:220px;left:0;width:100%;height:180px;opacity:.1" viewBox="0 0 430 180" fill="none">
-      <path d="M-10 140 Q90 60 210 110 Q330 160 440 40" stroke="#75B2DD" stroke-width="2.5" stroke-dasharray="7 5"/>
-      <path d="M-10 90 Q110 130 230 70 Q350 10 440 90" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="5 7"/>
-    </svg>
+  <!-- MAP LAYER (always present) -->
+  <div id="map">
+    <div id="map-placeholder">
+      <!-- grid lines for visual interest before map loads -->
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 40% 35%,#0d2a44 0%,#050d18 100%)"></div>
+    </div>
   </div>
-  <div class="welcome-content" style="margin-bottom:0">
-    <div class="welcome-mascot" style="margin-top:auto;padding-top:calc(40px + var(--safe-t))">♿</div>
-    <div style="height:28px"></div>
-    <div class="welcome-badge">URI Kingston Campus</div>
-    <div class="welcome-title">Your campus,<br><span>your way.</span></div>
-    <div class="welcome-sub">Navigate to accessible entrances.<br>Know the terrain before you go.</div>
-    <button class="btn-primary" onclick="startOnboard()"><span>Get started</span><span style="font-size:20px">→</span></button>
-    <button class="btn-secondary" onclick="skipToMain()">I've done this before</button>
-    <div style="height:8px"></div>
-  </div>
-</div>
 
-<!-- ── LOCATION SETUP ────────────────────────── -->
-<div id="v-location" class="view hidden">
-  <div class="top-bar">
-    <button class="back-btn" onclick="goTo('v-welcome')">←</button>
-    <div class="screen-title">Quick setup</div>
-  </div>
-  <div class="loc-card">
-    <div class="loc-icon-wrap">📍</div>
-    <div class="loc-title">Allow location access</div>
-    <div class="loc-sub">So we can find the closest accessible entrance and show you how hard the route is.</div>
-    <div class="perm-list">
-      <div class="perm-row"><span class="perm-icon">📍</span><div><div class="perm-text">Your location</div><div class="perm-sub">Real-time directions + terrain info</div></div><span class="perm-check" id="pc-loc">✓</span></div>
-      <div class="perm-row"><span class="perm-icon">🔔</span><div><div class="perm-text">Issue alerts</div><div class="perm-sub">Know about broken doors before you arrive</div></div><span class="perm-check" id="pc-notif">✓</span></div>
+  <!-- TOP UI -->
+  <div class="top-ui">
+    <div class="brand-pill">
+      <div class="brand-icon">♿</div>
+      <div>
+        <div class="brand-name">RampUp</div>
+        <div class="brand-sub">URI Kingston</div>
+      </div>
+    </div>
+    <div class="alert-pill" id="alert-pill">
+      <div class="alert-dot"></div>
+      <span id="alert-text">2 issues reported on campus</span>
     </div>
   </div>
-  <button class="btn-primary" style="margin:0 24px;width:calc(100% - 48px)" onclick="requestLocation()">Allow location</button>
-  <button class="btn-secondary" style="color:var(--text3);margin:10px auto;display:block;font-family:var(--font2)" onclick="skipToMain()">Skip for now</button>
-</div>
 
-<!-- ── WHERE TO ──────────────────────────────── -->
-<div id="v-where" class="view hidden">
-  <div class="where-header">
-    <div class="top-bar">
-      <button class="back-btn" style="background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.15)" onclick="goTo('v-welcome')">←</button>
-      <div><div class="screen-title">Where to?</div><div class="where-sub-h">73 buildings · URI Kingston</div></div>
-    </div>
-    <div class="loc-display">
-      <div class="loc-pulse-dot"></div>
-      <div class="loc-text" id="loc-text">URI Kingston Campus</div>
-    </div>
+  <!-- FAB RAIL -->
+  <div class="fab-rail">
+    <div class="fab" id="fab-locate" title="My location" onclick="locateMe()">📍</div>
+    <div class="fab" id="fab-report" title="Report issue" onclick="openReportSheet(null)">⚑</div>
+    <div class="fab" id="fab-close-nav" title="Close navigation" onclick="closeNav()" style="display:none;background:var(--red);border-color:var(--red)">✕</div>
   </div>
-  <div class="where-body" id="where-body">
-    <div style="height:14px"></div>
-    <div class="search-bar">
+
+  <!-- SEARCH BAR (floats over map) -->
+  <div class="search-bar" id="search-bar" style="top:calc(70px + var(--st))">
+    <div class="search-inner">
       <span class="search-icon">🔍</span>
-      <input id="dest-search" type="search" placeholder="Search any building…" autocomplete="off" autocorrect="off">
+      <input id="search-input" type="search" placeholder="Where to?" autocomplete="off" autocorrect="off" spellcheck="false">
     </div>
-    <!-- difficulty legend strip -->
-    <div class="diff-explainer" id="diff-explainer">
-      <div class="diff-explainer-title">Route difficulty</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-        <div class="diff-row"><div class="diff-row-icon" style="background:var(--easy-l)">🟢</div><div><div class="diff-row-text" style="color:#15803d">Easy</div><div class="diff-row-sub">Flat, smooth paths</div></div></div>
-        <div class="diff-row"><div class="diff-row-icon" style="background:var(--mod-l)">🟡</div><div><div class="diff-row-text" style="color:#b45309">Moderate</div><div class="diff-row-sub">Gentle inclines</div></div></div>
-        <div class="diff-row"><div class="diff-row-icon" style="background:var(--hard-l)">🔴</div><div><div class="diff-row-text" style="color:#b91c1c">Hard</div><div class="diff-row-sub">Steep slope, plan ahead</div></div></div>
-        <div class="diff-row"><div class="diff-row-icon" style="background:var(--expert-l)">🟣</div><div><div class="diff-row-text" style="color:#6d28d9">Expert only</div><div class="diff-row-sub">Very steep, limited access</div></div></div>
+  </div>
+
+  <!-- BOTTOM SHEET -->
+  <div class="sheet" id="sheet">
+    <div class="sheet-handle" id="sheet-handle"></div>
+
+    <!-- HOME CONTENT -->
+    <div class="home-content" id="home-content">
+      <div class="where-row">
+        <div class="where-title">Where to?</div>
+        <div class="where-count" id="where-count">82 buildings</div>
+      </div>
+      <div class="filter-row" id="filter-row">
+        <div class="chip on" data-f="all">All</div>
+        <div class="chip" data-f="full">♿ Accessible</div>
+        <div class="chip" data-f="public">⚡ Public access</div>
+        <div class="chip" data-f="limited">⚠ Limited</div>
+        <div class="chip issue-chip" data-f="issues">🔴 Has issues</div>
+      </div>
+      <div class="blist" id="blist"></div>
+    </div>
+
+    <!-- NAV CONTENT -->
+    <div class="nav-content" id="nav-content">
+      <!-- Route header -->
+      <div class="nav-header">
+        <div class="nav-route-num" id="nav-num">--</div>
+        <div class="nav-route-info">
+          <div class="nav-direction">
+            <div class="nav-arrow-icon">→</div>
+            <div class="nav-dest-name" id="nav-dest-name">Building</div>
+          </div>
+          <div class="nav-sub" id="nav-sub">Loading…</div>
+        </div>
+        <button class="go-btn" id="go-btn" onclick="simulateArrive()">GO</button>
+      </div>
+      <!-- Stat tiles -->
+      <div class="stat-row" id="stat-row">
+        <!-- filled by JS -->
+      </div>
+      <!-- Alerts -->
+      <div class="nav-alerts" id="nav-alerts"></div>
+      <!-- Step timeline -->
+      <div class="step-timeline" id="step-timeline"></div>
+      <!-- Report btn -->
+      <div class="report-row">
+        <button class="report-btn" onclick="openReportSheet(currentBuilding?.id)">
+          <span>⚑</span> Report issue at this entrance
+        </button>
       </div>
     </div>
-    <span class="section-label" id="suggestions-label">Nearby &amp; common</span>
-    <div class="building-grid" id="building-grid"></div>
-  </div>
-</div>
-
-<!-- ── NAVIGATION ────────────────────────────── -->
-<div id="v-nav" class="view hidden">
-  <!-- map behind everything -->
-  <div class="map-panel" id="map-panel">
-    <div id="nav-map" style="width:100%;height:100%"></div>
   </div>
 
-  <!-- steps panel (on top, toggleable) -->
-  <div class="steps-panel" id="steps-panel">
-    <div class="nav-diff-card" id="nav-diff-card"></div>
-    <div class="step-cards" id="step-cards"></div>
-    <div class="entrance-detail" id="entrance-detail"></div>
-    <div style="height:220px"></div><!-- spacer for bottom sheet -->
-  </div>
-
-  <!-- top bar: back + map/steps toggle -->
-  <div class="nav-top-bar">
-    <button class="back-btn" style="box-shadow:var(--shadow-lg)" onclick="goTo('v-where')">←</button>
-    <div class="view-toggle" id="view-toggle">
-      <button class="vt-btn active" id="vt-steps" onclick="setNavView('steps')"><span class="vt-icon">📋</span> Steps</button>
-      <button class="vt-btn" id="vt-map" onclick="setNavView('map')"><span class="vt-icon">🗺</span> Map</button>
+  <!-- ARRIVED OVERLAY -->
+  <div id="arrived-overlay">
+    <div class="arrived-bg"></div>
+    <div class="confetti-wrap" id="confetti"></div>
+    <div class="arrived-back">
+      <div class="fab" style="background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.15)" onclick="closeArrived()">←</div>
     </div>
-  </div>
-
-  <!-- bottom sheet (steps mode) -->
-  <div class="route-card" id="route-card">
-    <div class="route-handle"></div>
-    <div class="route-dest" id="route-dest"></div>
-    <div class="nav-btn-row">
-      <button class="btn-ghost" onclick="openReportSheet()">⚑ Issue</button>
-      <button class="btn-arrive" onclick="simulateArrive()">I'm here ✓</button>
-    </div>
-  </div>
-
-  <!-- compact bottom strip (map mode) -->
-  <div class="map-bottom-strip hidden" id="map-bottom-strip">
-    <div class="mbs-handle"></div>
-    <div class="mbs-row">
-      <div class="mbs-dest">
-        <div class="mbs-name" id="mbs-name"></div>
-        <div class="mbs-meta" id="mbs-meta"></div>
+    <div class="arrived-content">
+      <div class="arrived-big">🎉</div>
+      <div class="arrived-title">You're here!</div>
+      <div class="arrived-bldg" id="arrived-bldg"></div>
+      <div class="arrived-card" id="arrived-card"></div>
+      <div class="arrived-issue" id="arrived-issue">
+        <div style="font-size:18px">⚠</div>
+        <div><div class="ai-title" id="ai-title"></div><div class="ai-desc" id="ai-desc"></div></div>
       </div>
-      <div class="mbs-diff" id="mbs-diff"></div>
-      <button class="mbs-btn" onclick="simulateArrive()">I'm here ✓</button>
+      <div class="arrived-actions">
+        <button class="btn-dark" onclick="openReportSheet(currentBuilding?.id)">⚑ Report a problem here</button>
+        <button class="btn-green" onclick="closeArrived();closeNav()">Navigate to another building</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- ── ARRIVED ───────────────────────────────── -->
-<div id="v-arrived" class="view hidden">
-  <div class="confetti-wrap" id="confetti"></div>
-  <div style="position:absolute;top:calc(16px + var(--safe-t));left:18px;z-index:2">
-    <button class="back-btn" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.2)" onclick="goTo('v-where')">←</button>
-  </div>
-  <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;width:100%">
-    <div class="arrived-big">🎉</div>
-    <div class="arrived-h">You made it!</div>
-    <div class="arrived-bldg" id="arrived-bldg"></div>
-    <div class="entrance-big-card" id="entrance-big-card"></div>
-    <div class="issue-warn" id="issue-warn"><div style="font-size:18px">⚠</div><div><div class="iwt" id="iwt"></div><div class="iws" id="iws"></div></div></div>
-    <div class="arrived-actions">
-      <button class="btn-w" onclick="openReportSheet()">⚑ Report a problem at this entrance</button>
-      <button class="btn-ws" onclick="goTo('v-where')">Navigate to another building</button>
+  <!-- REPORT SHEET -->
+  <div class="rsheet-overlay" id="rsheet" onclick="closeReportSheet(event)">
+    <div class="rsheet">
+      <div class="rsheet-handle"></div>
+      <div class="rsheet-title">Report an issue</div>
+      <div class="rsheet-sub">Help other wheelchair users by flagging barriers.</div>
+      <div class="rtype-grid">
+        <div class="rtype on" data-type="door" onclick="selRType(this)"><div class="rtype-icon">🚪</div><div class="rtype-lbl">Door/opener</div></div>
+        <div class="rtype" data-type="elevator" onclick="selRType(this)"><div class="rtype-icon">🛗</div><div class="rtype-lbl">Elevator</div></div>
+        <div class="rtype" data-type="path" onclick="selRType(this)"><div class="rtype-icon">🚧</div><div class="rtype-lbl">Blocked path</div></div>
+        <div class="rtype" data-type="other" onclick="selRType(this)"><div class="rtype-icon">⚠</div><div class="rtype-lbl">Other</div></div>
+      </div>
+      <textarea class="rta" id="rta" placeholder="Describe what you found… (optional)"></textarea>
+      <button class="rsubmit" onclick="submitReport()">Submit report</button>
     </div>
   </div>
-</div>
-
-<!-- ── REPORT SHEET ──────────────────────────── -->
-<div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet(event)">
-  <div class="bottom-sheet">
-    <div class="sheet-handle"></div>
-    <div class="sheet-title">Report an issue</div>
-    <div class="sheet-sub">Help other wheelchair users by flagging barriers.</div>
-    <div class="type-grid">
-      <div class="type-btn sel" data-type="door" onclick="selType(this)"><div class="type-btn-icon">🚪</div><div class="type-btn-label">Door/opener</div></div>
-      <div class="type-btn" data-type="elevator" onclick="selType(this)"><div class="type-btn-icon">🛗</div><div class="type-btn-label">Elevator</div></div>
-      <div class="type-btn" data-type="path" onclick="selType(this)"><div class="type-btn-icon">🚧</div><div class="type-btn-label">Blocked path</div></div>
-      <div class="type-btn" data-type="other" onclick="selType(this)"><div class="type-btn-icon">⚠</div><div class="type-btn-label">Other</div></div>
-    </div>
-    <textarea class="sheet-ta" id="issue-desc" placeholder="Describe what you found… (optional)"></textarea>
-    <button class="btn-submit" onclick="submitIssue()">Submit report</button>
-  </div>
-</div>
 
 </div><!-- /app -->
 
 <script>
-// ─── DATA ─────────────────────────────────────────────────────────────────
-const F='full',P='public',L='limited';
-const ACCESS_COLOR={full:'#16a34a',public:'#d97706',limited:'#dc2626'};
-const ACCESS_LABEL={full:'Fully accessible',public:'Public access',limited:'Limited'};
-const CAT_EMOJI={Academic:'🏛',Residential:'🏠',Dining:'🍽',Recreation:'🏃',Greek:'🏠'};
-
-// Difficulty is computed dynamically based on elevation delta from user position
-// See calcDirectionalDiff() — it factors in uphill vs downhill direction
-
-// Route difficulty from campus center (approximate, based on URI map topography)
-// URI campus has a notable north-south slope: residential quad is higher, south campus lower
-// Plains Rd area (B-row) is significantly elevated vs D/E row
+// ── BUILDING DATA ──────────────────────────────────────────────────
+</script>
+<script>
+// Inline buildings - loaded from the data file
+</script>
+<script id="buildings-script">
 const BUILDINGS=[
   {id:'memorial_union',name:'Memorial Union',short:'Memorial Union',cat:'Academic',access:'full',lat:41.4797,lng:-71.5250,elev:43,grid:'D4',icon:'🏛',terrain:'Central campus. Flat paved paths.',entrance:{side:'North entrance (main)',features:['Automatic door opener','Elevator to all floors','Accessible restrooms all levels','Wide corridors'],warning:'Door opener intermittent — may need to strike mechanism'},steps:['Head toward the large brick building on Lower College Rd','Look for the blue wheelchair sign on the north side','Automatic door opener on left — tap to activate','Elevator is straight ahead past the lobby']},
   {id:'carothers',name:'Carothers Library',short:'Library',cat:'Academic',access:'full',lat:41.4835,lng:-71.5250,elev:49,grid:'B4',icon:'📚',terrain:'Upper campus. Uphill from central quad.',entrance:{side:'West entrance (accessible)',features:['Step-free ramp','Elevator to all 4 floors','Accessible study rooms','Accessible restrooms'],warning:null},steps:['Take the path north along Campus Ave — uphill','Library is the large building on your left','Use the west entrance — flat ramp, no steps','Elevator immediately on the right inside']},
@@ -571,397 +739,505 @@ const BUILDINGS=[
 
 // ─── ISSUES ───────────────────────────────────────────────────────────────
 let issues=[];
-try{issues=JSON.parse(localStorage.getItem('rampup_issues')||'[]');}catch{}
-if(!issues.length){issues=[
-  {id:'i1',building_id:'memorial_union',type:'door',desc:'North entrance door opener intermittent — strike mechanism to activate',ts:Date.now()-172800000},
-  {id:'i2',building_id:'ryan',type:'elevator',desc:'Floor 2 elevator pausing intermittently',ts:Date.now()-432000000},
-];}
-function hasIssue(id){return issues.some(i=>i.building_id===id)}
-function getBuildingIssues(id){return issues.filter(i=>i.building_id===id)}
-
-// ─── STATE ────────────────────────────────────────────────────────────────
-let userLat=41.4812,userLng=-71.5260,userElev=43,locationGranted=false; // 43m = central campus approx
-let currentBuilding=null,navMap=null,youMarker=null,destMarker=null,routeLine=null;
-let navViewMode='steps'; // 'steps' or 'map'
-let currentIssueType='door',leafletLoaded=false;
-let stepInterval=null;
-
-// ─── VIEWS ────────────────────────────────────────────────────────────────
-function goTo(id){
-  document.querySelectorAll('.view').forEach(v=>{
-    v.classList.toggle('hidden',v.id!==id);
-    v.classList.remove('gone-left');
-  });
+</script>
+<script>
+// ── ISSUES ────────────────────────────────────────────────────────
+let ISSUES = [];
+try { ISSUES = JSON.parse(localStorage.getItem('rampup_issues') || '[]'); } catch{}
+if (!ISSUES.length) {
+  ISSUES = [
+    {id:'i1',building_id:'memorial_union',type:'door',desc:'North entrance door opener intermittent — strike mechanism to activate',status:'repair',reported:'2025-04-10',eta:'1–2 weeks'},
+    {id:'i2',building_id:'ryan',type:'elevator',desc:'Floor 2 elevator pausing intermittently',status:'open',reported:'2025-04-07',eta:'Unknown'},
+  ];
 }
-function startOnboard(){goTo('v-location')}
-function skipToMain(){initMain();goTo('v-where')}
-function requestLocation(){
-  if(navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(pos=>{
-      userLat=pos.coords.latitude;userLng=pos.coords.longitude;
-      if(pos.coords.altitude)userElev=pos.coords.altitude;
-      locationGranted=true;
-      document.getElementById('pc-loc').classList.add('show');
-      setTimeout(()=>{document.getElementById('pc-notif').classList.add('show');setTimeout(()=>{initMain();goTo('v-where')},700)},500);
-    },()=>{document.getElementById('pc-loc').classList.add('show');setTimeout(()=>{initMain();goTo('v-where')},600)});
-  } else {initMain();goTo('v-where')}
-}
-function initMain(){
-  updateLocDisplay();
-  renderList(sortedBuildings());
-  setupSearch();
-  if(!locationGranted&&navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(pos=>{
-      userLat=pos.coords.latitude;userLng=pos.coords.longitude;
-      if(pos.coords.altitude)userElev=pos.coords.altitude;
-      locationGranted=true;
-      updateLocDisplay();renderList(sortedBuildings());
-    },()=>{});
-  }
+function hasIssue(id){ return ISSUES.some(i=>i.building_id===id); }
+function getBuildingIssues(id){ return ISSUES.filter(i=>i.building_id===id); }
+
+// ── STATE ──────────────────────────────────────────────────────────
+let userLat=41.4812, userLng=-71.5260, userElev=43, locationGranted=false;
+let currentBuilding=null, navMap=null, leafletLoaded=false;
+let youMarker=null, destMarker=null, routeLine=null;
+let activeFilter='all', searchQ='', reportBuildingId=null, rtype='door';
+let stepInterval=null, currentStep=0;
+let sheetDragStart=null, sheetTranslate=0;
+
+// ── DIFFICULTY ENGINE ──────────────────────────────────────────────
+function calcDiff(uElev, dElev, distM) {
+  const delta = dElev - uElev;
+  const g = distM > 0 ? Math.abs(delta)/distM : 0;
+  const pct = Math.round(g * 100);
+  const up = delta > 2, dn = delta < -2;
+  if (pct < 2) return {key:'easy',label:'Flat route',emoji:'🟢',color:getComputedStyle(document.documentElement).getPropertyValue('--green').trim()||'#1aff8c',cls:'diff-easy',dots:1,note:'Flat — easy both ways',pct,up,dn};
+  if (pct < 5) return up
+    ? {key:'mod',label:'Moderate ↑',emoji:'🟡',color:'#ffbe1a',cls:'diff-mod',dots:2,note:`Gentle uphill ${pct}%`,pct,up,dn}
+    : {key:'easy',label:'Easy ↓',emoji:'🟢',color:'#1aff8c',cls:'diff-easy',dots:1,note:`Downhill ${pct}% — uphill on return`,pct,up,dn};
+  if (pct < 9) return up
+    ? {key:'hard',label:'Hard ↑',emoji:'🔴',color:'#ff4a4a',cls:'diff-hard',dots:3,note:`Steep uphill ${pct}% — plan ahead`,pct,up,dn}
+    : {key:'mod',label:'Moderate ↓',emoji:'🟡',color:'#ffbe1a',cls:'diff-mod',dots:2,note:`Downhill ${pct}% — steep return`,pct,up,dn};
+  return up
+    ? {key:'expert',label:'Expert ↑',emoji:'🟣',color:'#a855f7',cls:'diff-expert',dots:4,note:`Very steep ${pct}% — rollback risk`,pct,up,dn}
+    : {key:'hard',label:'Hard ↓',emoji:'🔴',color:'#ff4a4a',cls:'diff-hard',dots:3,note:`Very steep downhill ${pct}%`,pct,up,dn};
 }
 
-// ─── UTILS ────────────────────────────────────────────────────────────────
+// ── UTILS ─────────────────────────────────────────────────────────
 function dist(a,b,c,d){
-  const dLat=(c-a)*Math.PI/180,dLng=(d-b)*Math.PI/180;
+  const dLat=(c-a)*Math.PI/180, dLng=(d-b)*Math.PI/180;
   const x=Math.sin(dLat/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLng/2)**2;
   return 6371000*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
-function distLabel(m){
-  if(m<50)return'Here';if(m<1000)return Math.round(m/50)*50+'m';return(m/1000).toFixed(1)+'km';
-}
-function sortedBuildings(){return[...BUILDINGS].sort((a,b)=>dist(userLat,userLng,a.lat,a.lng)-dist(userLat,userLng,b.lat,b.lng))}
-function updateLocDisplay(){
-  document.getElementById('loc-text').textContent=locationGranted?'Near Lower College Rd · URI Kingston':'URI Kingston Campus';
-}
+function distLabel(m){ return m<50?'Here':m<1000?Math.round(m/50)*50+'m':(m/1000).toFixed(1)+'km'; }
+function sorted(){ return [...BUILDINGS].sort((a,b)=>dist(userLat,userLng,a.lat,a.lng)-dist(userLat,userLng,b.lat,b.lng)); }
+function timeAgo(ds){const d=new Date(ds),n=new Date(),dy=Math.floor((n-d)/86400000);return dy===0?'Today':dy===1?'Yesterday':dy<7?dy+'d ago':Math.floor(dy/7)+'w ago';}
 
-// ─── DIFFICULTY RENDERING ────────────────────────────────────────────────
-function diffBadgeHtml(d){
-  const dotsFilled=d.dots;
-  const dotsHtml=Array.from({length:4},(_,i)=>`<div class="diff-dot ${i<dotsFilled?'lit':''}" style="background:${d.color}"></div>`).join('');
-  return`<span class="diff-badge diff-${d.key}">${d.emoji} ${d.label}<span class="diff-dots" style="margin-left:5px">${dotsHtml}</span></span>`;
-}
+// ── ICONS / CATS ───────────────────────────────────────────────────
+const CAT_ICON = {Academic:'🏛',Residential:'🏠',Dining:'🍽',Recreation:'🏋',Greek:'🏛'};
+const TIER_NUM = {full:'♿',public:'⚡',limited:'⚠'};
 
-// ─── BUILDING LIST ────────────────────────────────────────────────────────
-function renderList(list){
-  const grid=document.getElementById('building-grid');
-  grid.innerHTML=list.map(b=>{
-    const d=dist(userLat,userLng,b.lat,b.lng);
-    const hi=hasIssue(b.id);
-    const icon=CAT_EMOJI[b.cat]||'🏢';
-    return`<div class="building-tile ${b.access}" onclick="startNav('${b.id}')">
-      <div class="tile-icon ${b.access}">${icon}</div>
-      <div class="tile-body">
-        <div class="tile-name">${b.short||b.name}</div>
-        <div class="tile-meta">
-          <span class="tile-tag ${b.access}">${ACCESS_LABEL[b.access]}</span>
-          <span class="tile-cat">${b.cat}</span>
-          ${hi?'<span class="tile-issue">⚑ Issue</span>':''}
-        </div>
-        <div style="margin-top:5px">${diffBadgeHtml(calcDirectionalDiff(userElev,b.elev,d))}</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:3px;font-family:var(--font2)">${b.terrain}</div>
+// ── BUILDING LIST ──────────────────────────────────────────────────
+function renderList() {
+  const q = searchQ.toLowerCase();
+  const filtered = BUILDINGS.filter(b => {
+    const mq = !q || b.name.toLowerCase().includes(q) || (b.short||'').toLowerCase().includes(q) || b.cat.toLowerCase().includes(q) || b.grid.toLowerCase().includes(q);
+    if (!mq) return false;
+    if (activeFilter==='all') return true;
+    if (activeFilter==='issues') return hasIssue(b.id);
+    return b.access===activeFilter;
+  });
+
+  document.getElementById('where-count').textContent = filtered.length + ' buildings';
+
+  const list = document.getElementById('blist');
+  if (!filtered.length) {
+    list.innerHTML = `<div style="text-align:center;padding:48px 20px;color:var(--text3);font-size:13px;font-family:var(--font2)">No buildings found</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(b => {
+    const d = dist(userLat, userLng, b.lat, b.lng);
+    const df = calcDiff(userElev, b.elev, d);
+    const hi = hasIssue(b.id);
+    const num = b.grid ? b.grid : '?';
+    const icon = CAT_ICON[b.cat] || '🏢';
+    return `<div class="brow" onclick="startNav('${b.id}')">
+      <div class="brow-num">
+        <div class="brow-num-text ${b.access}">${icon}</div>
+        <div class="brow-icon-sub">${b.grid}</div>
       </div>
-      <div class="tile-right">
-        <span class="tile-dist">${distLabel(d)}</span>
-        <div class="tile-arrow">→</div>
+      <div class="brow-body">
+        <div class="brow-name">${b.short||b.name}</div>
+        <div class="brow-meta">
+          <span class="tier-tag tier-${b.access}">${b.access==='full'?'Accessible':b.access==='public'?'Public access':'Limited'}</span>
+          <span class="brow-cat">${b.cat}</span>
+          ${hi?'<span class="issue-badge">⚑ Issue</span>':''}
+        </div>
+        <div class="brow-meta" style="margin-top:4px">
+          <span class="diff-badge ${df.cls}">${df.emoji} ${df.label}</span>
+          <span class="brow-cat" style="font-size:9px">${b.terrain}</span>
+        </div>
+      </div>
+      <div class="brow-right">
+        <div class="brow-dist">${distLabel(d)}</div>
+        <div class="brow-arrow">›</div>
       </div>
     </div>`;
   }).join('');
 }
 
-function setupSearch(){
-  const input=document.getElementById('dest-search');
-  input.addEventListener('input',()=>{
-    const q=input.value.toLowerCase().trim();
-    const label=document.getElementById('suggestions-label');
-    if(!q){label.textContent='Nearby & common';renderList(sortedBuildings());}
-    else{
-      label.textContent='Results';
-      const f=BUILDINGS.filter(b=>b.name.toLowerCase().includes(q)||(b.short&&b.short.toLowerCase().includes(q))||b.cat.toLowerCase().includes(q)||b.grid.toLowerCase().includes(q));
-      renderList(f.length?f:BUILDINGS);
-    }
-  });
-}
+// ── SEARCH / FILTER ────────────────────────────────────────────────
+document.getElementById('search-input').addEventListener('input', e => {
+  searchQ = e.target.value;
+  renderList();
+});
+document.getElementById('filter-row').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  chip.classList.add('on');
+  activeFilter = chip.dataset.f;
+  renderList();
+});
 
-// ─── NAVIGATION ───────────────────────────────────────────────────────────
-function startNav(id){
-  currentBuilding=BUILDINGS.find(b=>b.id===id);
-  if(!currentBuilding)return;
-  navViewMode='steps';
-  buildNavScreen();
-  goTo('v-nav');
-  // Pre-load Leaflet quietly
-  if(!leafletLoaded)loadLeaflet(()=>{});
-}
-
-// Directional difficulty: takes elevation delta into account
-// Going uphill = harder, downhill = easier (but warns about return)
-function calcDirectionalDiff(userElev, destElev, distMeters){
-  const elevDelta = destElev - userElev; // positive = uphill, negative = downhill
-  const grade = distMeters > 0 ? Math.abs(elevDelta) / distMeters : 0;
-  const isUphill = elevDelta > 2;
-  const isDownhill = elevDelta < -2;
-  const gradePercent = Math.round(grade * 100);
-
-  // Grade thresholds
-  // < 2%: easy, 2-5%: moderate, 5-8%: hard, >8%: expert
-  let level, dirNote;
-  if(gradePercent < 2){
-    level = {key:'easy',label:'Easy',emoji:'🟢',color:'#16a34a',bg:'#dcfce7',dots:1};
-    dirNote = 'Flat route';
-  } else if(gradePercent < 5){
-    if(isUphill){
-      level = {key:'mod',label:'Moderate',emoji:'🟡',color:'#b45309',bg:'#fef3c7',dots:2};
-      dirNote = 'Gentle uphill ('+gradePercent+'% grade)';
-    } else {
-      level = {key:'easy',label:'Easy downhill',emoji:'🟢',color:'#16a34a',bg:'#dcfce7',dots:1};
-      dirNote = 'Gentle downhill ('+gradePercent+'% grade) · uphill on return';
-    }
-  } else if(gradePercent < 9){
-    if(isUphill){
-      level = {key:'hard',label:'Hard',emoji:'🔴',color:'#b91c1c',bg:'#fee2e2',dots:3};
-      dirNote = 'Steep uphill ('+gradePercent+'% grade) — plan your energy';
-    } else {
-      level = {key:'mod',label:'Moderate downhill',emoji:'🟡',color:'#b45309',bg:'#fef3c7',dots:2};
-      dirNote = 'Downhill now ('+gradePercent+'% grade) · steep uphill on return';
-    }
-  } else {
-    if(isUphill){
-      level = {key:'expert',label:'Expert only',emoji:'🟣',color:'#6d28d9',bg:'#ede9fe',dots:4};
-      dirNote = 'Very steep uphill ('+gradePercent+'% grade) — rollback risk for manual chairs';
-    } else {
-      level = {key:'hard',label:'Hard downhill',emoji:'🔴',color:'#b91c1c',bg:'#fee2e2',dots:3};
-      dirNote = 'Very steep downhill ('+gradePercent+'%) — braking needed. Very steep uphill on return.';
-    }
-  }
-  // Override for flat
-  if(!isUphill && !isDownhill) dirNote = 'Flat route — easy both ways';
-  return {...level, dirNote, gradePercent, isUphill, isDownhill, elevDelta};
-}
-
-function buildNavScreen(){
-  const b=currentBuilding;
-  const col=ACCESS_COLOR[b.access];
-  const icon=b.entrance?.icon||'🏢';
-  const d=dist(userLat,userLng,b.lat,b.lng);
-
-  // route dest header
-  document.getElementById('route-dest').innerHTML=`
-    <div class="route-dest-icon" style="background:${col}18">${icon}</div>
-    <div style="flex:1">
-      <div class="route-dest-name">${b.name}</div>
-      <div class="route-dest-tag" style="color:${col}">${ACCESS_LABEL[b.access]} · ${b.entrance?.side||'Main entrance'}</div>
-    </div>`;
-
-  // difficulty card (top of steps panel)
-  const df=calcDirectionalDiff(userElev, b.elev, d);
-  const dotsFull=Array.from({length:4},(_,i)=>`<div class="ndc-dot ${i<df.dots?'lit':''}" style="background:${df.color}"></div>`).join('');
-  const dirArrow=df.isUphill?'↑ ':df.isDownhill?'↓ ':'→ ';
-  document.getElementById('nav-diff-card').innerHTML=`
-    <div class="ndc-icon-wrap" style="background:${df.bg}">${df.emoji}</div>
-    <div style="flex:1">
-      <div class="ndc-label" style="color:${df.color}">${dirArrow}${df.label}</div>
-      <div class="ndc-title" style="color:${df.color};font-size:15px">${df.dirNote}</div>
-      <div class="ndc-detail">${b.terrain}</div>
-      <div class="ndc-dots">${dotsFull}</div>
-    </div>`;
-  document.getElementById('nav-diff-card').style.background=df.bg;
-
-  // map bottom strip
-  document.getElementById('mbs-name').textContent=b.name;
-  document.getElementById('mbs-meta').textContent=`${distLabel(d)} away · ${b.entrance?.side||'Main entrance'}`;
-  document.getElementById('mbs-diff').innerHTML=diffBadgeHtml(df);
-
-  // steps
-  const steps=b.steps||['Head to '+b.name,'Use the accessible entrance'];
-  document.getElementById('step-cards').innerHTML=steps.map((s,i)=>`
-    <div class="step-card ${i===0?'active-step':''}" id="step-${i}">
-      <div class="step-num ${i===0?'current':'upcoming'}">${i===0?i+1:i+1}</div>
-      <div>
-        <div class="step-text">${s}</div>
-        ${i===0?`<div class="step-sub">Starting point · ${distLabel(d)} to destination</div>`:''}
-      </div>
-    </div>`).join('');
-
-  // entrance
-  const ent=b.entrance;
-  if(ent){
-    const feats=ent.features||[];
-    document.getElementById('entrance-detail').innerHTML=`
-      <div class="ent-label">At your destination</div>
-      <div class="ent-title">${ent.side}</div>
-      <div class="ent-features">
-        ${feats.map(f=>`<span class="ent-feat">${f}</span>`).join('')}
-        ${ent.warning?`<span class="ent-feat warn">⚠ ${ent.warning}</span>`:''}
-      </div>`;
-    document.getElementById('entrance-detail').classList.add('show');
-  }
-
-  // animate steps
-  if(stepInterval)clearInterval(stepInterval);
-  let step=1;
-  stepInterval=setInterval(()=>{
-    const cards=document.querySelectorAll('.step-card');
-    if(step<=1){}
-    const prev=document.getElementById('step-'+(step-1));
-    if(prev){prev.classList.remove('active-step');const n=prev.querySelector('.step-num');if(n){n.className='step-num done';n.textContent='✓';}}
-    const cur=document.getElementById('step-'+step);
-    if(cur){cur.classList.add('active-step');const n=cur.querySelector('.step-num');if(n)n.className='step-num current';}
-    step++;if(step>=cards.length){clearInterval(stepInterval);stepInterval=null;}
-  },3500);
-
-  // apply initial view
-  applyNavView();
-}
-
-// ─── MAP / STEPS TOGGLE ───────────────────────────────────────────────────
-function setNavView(mode){
-  navViewMode=mode;
-  applyNavView();
-  if(mode==='map'){
-    if(!leafletLoaded){
-      loadLeaflet(()=>{
-        // wait for panel to be visible then init
-        requestAnimationFrame(()=>requestAnimationFrame(()=>initNavMap()));
-      });
-    } else if(!navMap){
-      requestAnimationFrame(()=>requestAnimationFrame(()=>initNavMap()));
-    }
-    // applyNavView already calls invalidateSize after rAF
-  }
-}
-
-function applyNavView(){
-  const isMap=navViewMode==='map';
-  document.getElementById('vt-steps').classList.toggle('active',!isMap);
-  document.getElementById('vt-map').classList.toggle('active',isMap);
-  document.getElementById('steps-panel').classList.toggle('hidden',isMap);
-  document.getElementById('map-panel').classList.toggle('hidden',!isMap);
-  document.getElementById('route-card').classList.toggle('hidden',isMap);
-  document.getElementById('map-bottom-strip').classList.toggle('hidden',!isMap);
-  // After DOM update, fix map size
-  if(isMap && navMap){
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      navMap.invalidateSize({animate:false});
-      updateMapMarkers();
-    }));
-  }
-}
-
-// ─── LEAFLET MAP ──────────────────────────────────────────────────────────
-function loadLeaflet(cb){
-  if(leafletLoaded){cb();return;}
-  const s=document.createElement('script');
-  s.src='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
-  s.onload=()=>{leafletLoaded=true;cb();};
-  s.onerror=()=>{document.getElementById('nav-map').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text3);flex-direction:column;gap:8px;font-size:13px"><div style="font-size:40px">🗺</div>Map needs internet</div>';};
+// ── MAP ────────────────────────────────────────────────────────────
+function loadLeaflet(cb) {
+  if (leafletLoaded) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+  s.onload = () => { leafletLoaded = true; cb(); };
   document.head.appendChild(s);
 }
 
-function initNavMap(){
-  const el=document.getElementById('nav-map');
-  if(!el||!window.L)return;
-  // Destroy stale map instance to avoid size/tile glitches
-  if(navMap){navMap.remove();navMap=null;youMarker=null;destMarker=null;routeLine=null;}
-  // Wipe container
-  el.innerHTML='';
-  navMap=L.map(el,{
-    center:[currentBuilding?currentBuilding.lat:userLat, currentBuilding?currentBuilding.lng:userLng],
-    zoom:16,zoomControl:true,attributionControl:true,
-    preferCanvas:true
+function initMap(cb) {
+  const el = document.getElementById('map');
+  if (navMap) { navMap.remove(); navMap=null; youMarker=null; destMarker=null; routeLine=null; }
+  el.innerHTML = '';
+  navMap = L.map(el, {
+    center: [userLat, userLng], zoom: 17,
+    zoomControl: false, attributionControl: false,
+    preferCanvas: true
   });
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
-    attribution:'© <a href="https://openstreetmap.org">OSM</a> © <a href="https://carto.com">CARTO</a>',
-    subdomains:'abcd',maxZoom:20,crossOrigin:true
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    subdomains: 'abcd', maxZoom: 20
   }).addTo(navMap);
-  navMap.whenReady(()=>{
-    navMap.invalidateSize({animate:false});
-    updateMapMarkers();
+  navMap.whenReady(() => {
+    requestAnimationFrame(() => {
+      navMap.invalidateSize({animate:false});
+      if (cb) cb();
+    });
   });
 }
 
-function updateMapMarkers(){
-  if(!navMap||!currentBuilding)return;
-  const b=currentBuilding;
-  const df=b.diff;
+function addYouMarker() {
+  if (!navMap) return;
+  if (youMarker) navMap.removeLayer(youMarker);
+  youMarker = L.marker([userLat,userLng], {
+    icon: L.divIcon({html:'<div class="you-ring"></div>',className:'',iconSize:[22,22],iconAnchor:[11,11]})
+  }).addTo(navMap);
+}
 
-  if(youMarker)navMap.removeLayer(youMarker);
-  youMarker=L.marker([userLat,userLng],{
-    icon:L.divIcon({html:'<div class="you-dot"></div>',className:'',iconSize:[18,18],iconAnchor:[9,9]})
-  }).addTo(navMap).bindPopup('📍 You are here');
+function addRouteMarkers(b) {
+  if (!navMap) return;
+  if (destMarker) navMap.removeLayer(destMarker);
+  if (routeLine) navMap.removeLayer(routeLine);
 
-  if(destMarker)navMap.removeLayer(destMarker);
-  const col=ACCESS_COLOR[b.access];
-  const destHtml=`<div style="background:${col};color:#fff;font-size:12px;font-weight:800;padding:7px 12px;border-radius:20px;white-space:nowrap;box-shadow:0 3px 14px ${col}60;border:2px solid white;display:flex;align-items:center;gap:5px"><span>${b.entrance?.icon||'🏢'}</span><span>${b.short||b.name}</span></div>`;
-  destMarker=L.marker([b.lat,b.lng],{
-    icon:L.divIcon({html:destHtml,className:'',iconAnchor:[50,16]})
-  }).addTo(navMap).bindPopup(b.name+' — '+ACCESS_LABEL[b.access]);
+  const d = dist(userLat,userLng,b.lat,b.lng);
+  const df = calcDiff(userElev, b.elev, d);
+
+  // Dest pill marker
+  const colMap = {full:'#1aff8c',public:'#ffbe1a',limited:'#ff4a4a'};
+  const col = colMap[b.access] || '#1a9fff';
+  const html = `<div style="background:${col};color:#000;font-size:12px;font-weight:900;padding:6px 12px;border-radius:18px;white-space:nowrap;box-shadow:0 4px 16px ${col}80;border:2px solid rgba(255,255,255,.3);display:flex;align-items:center;gap:5px"><span>${b.entrance?.icon||'🏢'}</span><span>${b.short||b.name}</span></div>`;
+  destMarker = L.marker([b.lat,b.lng], {
+    icon: L.divIcon({html,className:'',iconAnchor:[60,16]})
+  }).addTo(navMap);
 
   // Route line colored by difficulty
-  if(routeLine)navMap.removeLayer(routeLine);
-  const dynDf=calcDirectionalDiff(userElev,b.elev,dist(userLat,userLng,b.lat,b.lng));
-  routeLine=L.polyline([[userLat,userLng],[b.lat,b.lng]],{
-    color:dynDf.color,weight:5,opacity:.85,dashArray:'12 6',lineCap:'round',lineJoin:'round'
+  routeLine = L.polyline([[userLat,userLng],[b.lat,b.lng]], {
+    color: df.color, weight: 5, opacity: .85, dashArray: '12 8', lineCap: 'round'
   }).addTo(navMap);
-  navMap.fitBounds([[userLat,userLng],[b.lat,b.lng]],{padding:[80,100],maxZoom:17});
 
-  navMap.fitBounds([[userLat,userLng],[b.lat,b.lng]],{padding:[70,90]});
+  navMap.fitBounds([[userLat,userLng],[b.lat,b.lng]], {padding:[80,100], maxZoom:17});
 }
 
-// ─── ARRIVE ───────────────────────────────────────────────────────────────
-function simulateArrive(){
-  if(stepInterval){clearInterval(stepInterval);stepInterval=null;}
-  const b=currentBuilding;if(!b)return;
-  const ent=b.entrance||{side:'Main entrance',features:[],icon:'🏢'};
-  const bIssues=getBuildingIssues(b.id);
-  document.getElementById('arrived-bldg').textContent=b.name;
-  document.getElementById('entrance-big-card').innerHTML=`
-    <div class="ebc-row">
-      <div class="ebc-icon">${ent.icon}</div>
-      <div><div class="ebc-title">${ent.side}</div><div class="ebc-desc">${ent.features&&ent.features.length?ent.features.slice(0,2).join(' · '):'Use the accessible entrance.'}</div></div>
+function locateMe() {
+  if (!navigator.geolocation) { showToast('Location not available'); return; }
+  showToast('Finding your location…');
+  navigator.geolocation.getCurrentPosition(pos => {
+    userLat = pos.coords.latitude;
+    userLng = pos.coords.longitude;
+    if (pos.coords.altitude) userElev = pos.coords.altitude;
+    locationGranted = true;
+    if (navMap) {
+      navMap.flyTo([userLat,userLng], 17, {animate:true,duration:1});
+      addYouMarker();
+    } else {
+      loadLeaflet(() => initMap(() => { addYouMarker(); }));
+    }
+    renderList();
+    showToast('Location found');
+  }, () => showToast('Could not access location'));
+}
+
+// ── NAVIGATION ─────────────────────────────────────────────────────
+function startNav(id) {
+  const b = BUILDINGS.find(x=>x.id===id);
+  if (!b) return;
+  currentBuilding = b;
+  buildNavSheet(b);
+  openNavSheet();
+  // Load map and show route
+  loadLeaflet(() => {
+    initMap(() => {
+      addYouMarker();
+      addRouteMarkers(b);
+    });
+  });
+  document.getElementById('search-input').value = '';
+  searchQ = '';
+}
+
+function buildNavSheet(b) {
+  const d = dist(userLat,userLng,b.lat,b.lng);
+  const df = calcDiff(userElev, b.elev, d);
+  const bIssues = getBuildingIssues(b.id);
+  const hi = bIssues.length > 0;
+  const tierCls = {full:'full',public:'public',limited:'limited'};
+
+  // Route number (use first 2 chars of grid as the "route")
+  document.getElementById('nav-num').textContent = b.grid;
+  document.getElementById('nav-num').className = 'nav-route-num ' + b.access;
+  document.getElementById('nav-dest-name').textContent = b.name;
+  document.getElementById('nav-sub').textContent = (b.entrance?.side || 'Accessible entrance') + ' · ' + distLabel(d) + ' away';
+
+  // Stat tiles
+  const walkMin = Math.max(1, Math.round(d / 50)); // ~50m/min in wheelchair
+  const statRow = document.getElementById('stat-row');
+  statRow.innerHTML = `
+    <div class="stat-tile stat-tile-primary">
+      <div class="stat-num">${walkMin}</div>
+      <div class="stat-label">minutes away</div>
     </div>
-    <div class="feat-wrap">
-      ${(ent.features||[]).map(f=>`<span class="feat-pill">${f}</span>`).join('')}
-      ${ent.warning?`<span class="feat-pill warn">⚠ ${ent.warning}</span>`:''}
+    <div class="stat-tile stat-tile-secondary">
+      <div style="font-size:20px;margin-bottom:4px">${df.emoji}</div>
+      <div class="stat-label" style="color:${df.color};font-size:12px;font-weight:800">${df.label}</div>
+      <div class="stat-sublabel" style="color:${df.color}">${df.note}</div>
+    </div>
+    <div class="stat-tile stat-tile-secondary" style="min-width:100px">
+      <div class="stat-num" style="font-size:18px;color:var(--text2)">${b.entrance?.side||'Main entrance'}</div>
+      <div class="stat-label">entrance</div>
     </div>`;
-  const iw=document.getElementById('issue-warn');
-  if(bIssues.length){
-    iw.classList.add('show');
-    document.getElementById('iwt').textContent='Active issue reported here';
-    document.getElementById('iws').textContent=bIssues[0].desc;
-  } else {iw.classList.remove('show');}
-  spawnConfetti();
-  goTo('v-arrived');
+
+  // Alerts
+  const navAlerts = document.getElementById('nav-alerts');
+  navAlerts.innerHTML = '';
+  if (hi) {
+    const pill = document.createElement('div');
+    pill.className = 'nav-alert-pill nav-alert-warn';
+    pill.innerHTML = `⚠ ${bIssues[0].desc.substring(0,50)}${bIssues[0].desc.length>50?'…':''}`;
+    navAlerts.appendChild(pill);
+  }
+  if (b.entrance?.warning) {
+    const pill = document.createElement('div');
+    pill.className = 'nav-alert-pill nav-alert-info';
+    pill.innerHTML = `💬 ${b.entrance.warning}`;
+    navAlerts.appendChild(pill);
+  }
+
+  // Steps with timeline
+  const steps = b.steps || ['Head toward ' + b.name, 'Use the accessible entrance'];
+  const timeline = document.getElementById('step-timeline');
+  currentStep = 0;
+
+  timeline.innerHTML = steps.map((s,i) => {
+    const isLast = i === steps.length - 1;
+    const dotCls = i===0?'active':'upcoming';
+    const lineCls = i===0?'active':'';
+    return `
+      <div class="step-row">
+        <div class="step-dot-col">
+          <div class="step-dot ${dotCls}" id="sdot-${i}"></div>
+          ${!isLast?`<div class="step-line ${lineCls}" id="sline-${i}"></div>`:''}
+        </div>
+        <div class="step-content" id="scontent-${i}">
+          <div class="step-time" id="stime-${i}">${i===0?'NOW':'NEXT'}</div>
+          <div class="step-text">${s}</div>
+          ${i===0?`<div class="step-subtext">${distLabel(d)} to destination · ${walkMin} min walk</div>`:''}
+          ${isLast && b.entrance ? `
+            <div class="step-entrance-card">
+              <div class="ent-label">At your destination</div>
+              <div class="ent-side">${b.entrance.side}</div>
+              <div class="ent-features">
+                ${(b.entrance.features||[]).map(f=>`<span class="ent-feat">${f}</span>`).join('')}
+                ${b.entrance.warning?`<span class="ent-feat warn">⚠ ${b.entrance.warning}</span>`:''}
+              </div>
+            </div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  // Auto-advance steps
+  if (stepInterval) clearInterval(stepInterval);
+  stepInterval = setInterval(() => {
+    const prev = document.getElementById(`sdot-${currentStep}`);
+    const prevLine = document.getElementById(`sline-${currentStep}`);
+    if (prev) { prev.className='step-dot done'; }
+    if (prevLine) { prevLine.className='step-line done'; }
+    const stEl = document.getElementById(`stime-${currentStep}`);
+    if (stEl) stEl.textContent = '✓ DONE';
+    currentStep++;
+    if (currentStep < steps.length) {
+      const cur = document.getElementById(`sdot-${currentStep}`);
+      const curLine = document.getElementById(`sline-${currentStep}`);
+      if (cur) cur.className = 'step-dot active';
+      if (curLine) curLine.className = 'step-line active';
+      const stCur = document.getElementById(`stime-${currentStep}`);
+      if (stCur) stCur.textContent = 'NOW';
+    } else {
+      clearInterval(stepInterval); stepInterval = null;
+    }
+  }, 3800);
 }
 
-function spawnConfetti(){
-  const c=document.getElementById('confetti');c.innerHTML='';
-  const cols=['#3b82f6','#22c55e','#f59e0b','#ec4899','#a78bfa','#fff','#34d399'];
-  for(let i=0;i<28;i++){
-    const el=document.createElement('div');el.className='confetti-piece';
-    el.style.cssText=`left:${Math.random()*100}%;width:${6+Math.random()*7}px;height:${6+Math.random()*7}px;background:${cols[Math.floor(Math.random()*cols.length)]};animation-duration:${2.5+Math.random()*2.5}s;animation-delay:${Math.random()*1.2}s;border-radius:${Math.random()>.5?'50%':'3px'}`;
+function openNavSheet() {
+  const sheet = document.getElementById('sheet');
+  sheet.classList.add('nav-mode');
+  document.getElementById('fab-close-nav').style.display = 'flex';
+  document.getElementById('search-bar').style.top = '-100px'; // hide search
+}
+
+function closeNav() {
+  if (stepInterval) { clearInterval(stepInterval); stepInterval=null; }
+  const sheet = document.getElementById('sheet');
+  sheet.classList.remove('nav-mode');
+  document.getElementById('fab-close-nav').style.display = 'none';
+  document.getElementById('search-bar').style.top = `calc(70px + var(--st))`;
+  currentBuilding = null;
+  // Keep map but clear route
+  if (routeLine && navMap) { navMap.removeLayer(routeLine); routeLine=null; }
+  if (destMarker && navMap) { navMap.removeLayer(destMarker); destMarker=null; }
+  renderList();
+}
+
+// ── ARRIVAL ────────────────────────────────────────────────────────
+function simulateArrive() {
+  if (!currentBuilding) return;
+  const b = currentBuilding;
+  if (stepInterval) { clearInterval(stepInterval); stepInterval=null; }
+
+  document.getElementById('arrived-bldg').textContent = b.name;
+
+  const ent = b.entrance || {side:'Main entrance',features:[],icon:'🏢'};
+  const bIssues = getBuildingIssues(b.id);
+
+  document.getElementById('arrived-card').innerHTML = `
+    <div style="font-size:22px;margin-bottom:8px">${ent.icon||'🏢'}</div>
+    <div class="arrived-ent-side">${ent.side}</div>
+    <div class="arrived-feats">
+      ${(ent.features||[]).map(f=>`<span class="arrived-feat">${f}</span>`).join('')}
+      ${ent.warning?`<span class="arrived-feat warn">⚠ ${ent.warning}</span>`:''}
+    </div>`;
+
+  if (bIssues.length) {
+    document.getElementById('arrived-issue').classList.add('show');
+    document.getElementById('ai-title').textContent = 'Active issue reported here';
+    document.getElementById('ai-desc').textContent = bIssues[0].desc;
+  } else {
+    document.getElementById('arrived-issue').classList.remove('show');
+  }
+
+  spawnConfetti();
+  document.getElementById('arrived-overlay').classList.add('show');
+}
+
+function closeArrived() {
+  document.getElementById('arrived-overlay').classList.remove('show');
+  document.getElementById('confetti').innerHTML = '';
+}
+
+function spawnConfetti() {
+  const c = document.getElementById('confetti'); c.innerHTML='';
+  const cols = ['#1a9fff','#1aff8c','#ffbe1a','#ff4a4a','#a855f7','#fff'];
+  for (let i=0;i<28;i++) {
+    const el = document.createElement('div');
+    el.className='cp';
+    el.style.cssText = `left:${Math.random()*100}%;width:${5+Math.random()*8}px;height:${5+Math.random()*8}px;background:${cols[Math.floor(Math.random()*cols.length)]};animation-duration:${2+Math.random()*3}s;animation-delay:${Math.random()*1.2}s;border-radius:${Math.random()>.5?'50%':'3px'}`;
     c.appendChild(el);
   }
 }
 
-// ─── REPORT ───────────────────────────────────────────────────────────────
-function openReportSheet(){document.getElementById('sheet-overlay').classList.add('open')}
-function closeSheet(e){if(e.target===document.getElementById('sheet-overlay'))document.getElementById('sheet-overlay').classList.remove('open')}
-function selType(el){document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('sel'));el.classList.add('sel');currentIssueType=el.dataset.type}
-function submitIssue(){
-  const b=currentBuilding;
-  const desc=document.getElementById('issue-desc').value.trim()||'No description.';
-  const titles={door:'Door/opener issue',elevator:'Elevator issue',path:'Path blocked',other:'Accessibility barrier'};
-  issues.unshift({id:'u'+Date.now(),building_id:b?.id||'unknown',type:currentIssueType,desc,ts:Date.now()});
-  try{localStorage.setItem('rampup_issues',JSON.stringify(issues))}catch{}
-  document.getElementById('sheet-overlay').classList.remove('open');
-  document.getElementById('issue-desc').value='';
-  const btn=document.querySelector('.btn-submit');
-  btn.textContent='✓ Reported — thank you!';btn.style.background='#16a34a';
-  setTimeout(()=>{btn.textContent='Submit report';btn.style.background=''},2500);
+// ── REPORT ─────────────────────────────────────────────────────────
+function openReportSheet(bid) {
+  reportBuildingId = bid || null;
+  document.getElementById('rsheet').classList.add('open');
+}
+function closeReportSheet(e) {
+  if (e.target === document.getElementById('rsheet')) document.getElementById('rsheet').classList.remove('open');
+}
+function selRType(el) {
+  document.querySelectorAll('.rtype').forEach(r=>r.classList.remove('on'));
+  el.classList.add('on'); rtype = el.dataset.type;
+}
+function submitReport() {
+  const desc = document.getElementById('rta').value.trim() || 'No description provided.';
+  const titles = {door:'Door/opener issue',elevator:'Elevator issue',path:'Path blocked',other:'Barrier reported'};
+  const b = BUILDINGS.find(x=>x.id===reportBuildingId);
+  ISSUES.unshift({id:'u'+Date.now(),building_id:reportBuildingId||'unknown',building:b?b.name:'Unknown',type:rtype,desc,status:'open',reported:new Date().toISOString().split('T')[0],eta:'Under review'});
+  try{localStorage.setItem('rampup_issues',JSON.stringify(ISSUES));}catch{}
+  document.getElementById('rsheet').classList.remove('open');
+  document.getElementById('rta').value = '';
+  const btn = document.querySelector('.rsubmit');
+  btn.textContent = '✓ Reported — thank you!';
+  btn.style.background = '#1aff8c'; btn.style.color = '#000';
+  setTimeout(()=>{btn.textContent='Submit report';btn.style.background='';btn.style.color='';},2500);
+  updateAlertPill();
+  if (navMap) addRouteMarkers(currentBuilding); // refresh map markers
 }
 
-// ─── INIT ─────────────────────────────────────────────────────────────────
-window.addEventListener('load',()=>{renderList(sortedBuildings());setupSearch()});
+function updateAlertPill() {
+  const openCount = ISSUES.filter(i=>i.status!=='resolved').length;
+  const pill = document.getElementById('alert-pill');
+  const text = document.getElementById('alert-text');
+  if (openCount > 0) {
+    pill.classList.add('show');
+    text.textContent = openCount + ' issue' + (openCount>1?'s':'') + ' reported on campus';
+  }
+}
+
+// ── SHEET DRAG ─────────────────────────────────────────────────────
+// Simple touch drag to resize sheet
+const handle = document.getElementById('sheet-handle');
+const sheet = document.getElementById('sheet');
+let dragY0 = 0, sheetH0 = 0;
+handle.addEventListener('touchstart', e => {
+  dragY0 = e.touches[0].clientY;
+  sheetH0 = sheet.getBoundingClientRect().height;
+}, {passive:true});
+handle.addEventListener('touchmove', e => {
+  const dy = dragY0 - e.touches[0].clientY;
+  // dy > 0 = dragging up (expand), < 0 = dragging down (shrink)
+  sheet.style.maxHeight = Math.min(Math.max(sheetH0 + dy, 140), window.innerHeight*.9) + 'px';
+}, {passive:true});
+
+// ── TOAST ──────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id='toast';
+    t.style.cssText='position:absolute;bottom:calc(90px + var(--sb));left:50%;transform:translateX(-50%);background:rgba(255,255,255,.12);backdrop-filter:blur(12px);color:#fff;padding:9px 18px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap;z-index:999;transition:opacity .25s;border:1px solid rgba(255,255,255,.15);font-family:var(--font)';
+    document.getElementById('app').appendChild(t);
+  }
+  t.textContent = msg; t.style.opacity='1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.style.opacity='0', 2400);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  // Try GPS silently
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos=>{
+      userLat=pos.coords.latitude; userLng=pos.coords.longitude;
+      if(pos.coords.altitude) userElev=pos.coords.altitude;
+      locationGranted=true;
+      renderList();
+      if (navMap) { addYouMarker(); navMap.flyTo([userLat,userLng],16); }
+    }, ()=>{});
+  }
+
+  renderList();
+  updateAlertPill();
+
+  // Load map immediately (Transit-style: map is always the canvas)
+  loadLeaflet(() => {
+    initMap(() => {
+      addYouMarker();
+      // Show all accessible buildings as small dots on initial map
+      BUILDINGS.forEach(b => {
+        const colMap={full:'#1aff8c',public:'#ffbe1a',limited:'#ff4a4a'};
+        const col = colMap[b.access]||'#1a9fff';
+        const hi = hasIssue(b.id);
+        const dotHtml=`<div style="width:${hi?12:8}px;height:${hi?12:8}px;border-radius:50%;background:${hi?'#ffbe1a':col};border:2px solid rgba(255,255,255,.4);box-shadow:0 0 ${hi?10:6}px ${col}60;cursor:pointer;transition:transform .15s" onmouseover="this.style.transform='scale(1.4)'" onmouseout="this.style.transform=''"></div>`;
+        L.marker([b.lat,b.lng],{
+          icon:L.divIcon({html:dotHtml,className:'',iconSize:[hi?12:8,hi?12:8],iconAnchor:[hi?6:4,hi?6:4]})
+        }).addTo(navMap).on('click',()=>startNav(b.id));
+      });
+      navMap.setView([41.4810,-71.5254],15);
+    });
+  });
+
+  // Check deep-link
+  const params = new URLSearchParams(location.search);
+  const bid = params.get('building');
+  if (bid) setTimeout(()=>startNav(bid), 800);
+
+  // PWA service worker
+  if ('serviceWorker' in navigator) {
+    const sw=`const C='rampup-v4';const A=['/'];self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(A)));self.skipWaiting();});self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))));self.clients.claim();});self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('/'))));});`;
+    const blob=new Blob([sw],{type:'application/javascript'});
+    navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+  }
+});
 </script>
 </body>
 </html>
